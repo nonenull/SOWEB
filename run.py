@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-from System import soweb
+from System import server
 
 if __name__ == "__main__":
-    soweb.Run()
+    server.Run()

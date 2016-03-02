@@ -1,66 +1,109 @@
 # -*- coding: utf-8 -*-
+import logging, logging.config
 
-import os
-import logging
-import logging.handlers
-from Config.config import LOG_EXPIRATION_TIME,LOG_LEVEL
+LOGGING = {
+    # 版本，总是1
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'},
+        'simple': {'format': '%(levelname)s %(message)s'},
+        'default': {
+            'format': '%(asctime)s %(levelname)s %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    },
+    'handlers': {
+        'null': {
+            'level': 'DEBUG',
+            'class': 'logging.NullHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'default'
+        },
+        'debugFile': {
+            'level': 'DEBUG',
+            # TimedRotatingFileHandler会将日志按一定时间间隔写入文件中，并
+            # 将文件重命名为'原文件名+时间戮'这样的形式
+            # Python提供了其它的handler，参考logging.handlers
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'default',
+            # 后面这些会以参数的形式传递给TimedRotatingFileHandler的
+            # 构造器
 
-logDirPath = "logs"
-logName = "applog"
+            # filename所在的目录要确保存在
+            'filename': 'logs/applog-debug.log',
+            # 每5分钟刷新一下
+            'when': 'D',
+            'interval': 1,
+            'encoding': 'utf8',
+        },
+        'infoFile': {
+            'level': 'INFO',
+            # TimedRotatingFileHandler会将日志按一定时间间隔写入文件中，并
+            # 将文件重命名为'原文件名+时间戮'这样的形式
+            # Python提供了其它的handler，参考logging.handlers
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'default',
+            # 后面这些会以参数的形式传递给TimedRotatingFileHandler的
+            # 构造器
 
-logger = logging.getLogger()
-logger.setLevel(getattr(logging,LOG_LEVEL))
-formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(module)s:%(message)s")
+            # filename所在的目录要确保存在
+            'filename': 'logs/applog-info.log',
+            # 每5分钟刷新一下
+            'when': 'D',
+            'interval': 1,
+            'encoding': 'utf8',
+        },
+        'errorFile': {
+            'level': 'ERROR',
+            # TimedRotatingFileHandler会将日志按一定时间间隔写入文件中，并
+            # 将文件重命名为'原文件名+时间戮'这样的形式
+            # Python提供了其它的handler，参考logging.handlers
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'default',
+            # 后面这些会以参数的形式传递给TimedRotatingFileHandler的
+            # 构造器
 
-class Logger:
+            # filename所在的目录要确保存在
+            'filename': 'logs/applog-error.log',
+            'when': 'D',
+            'interval': 1,
+            'encoding': 'utf8',
+        }
+    },
+    'loggers': {
+        'debug': {
+            'level': 'DEBUG',
+            'handlers': ['console', 'debugFile'],
+            'propagate': True
+        },
+        'info': {
+            'level': 'INFO',
+            'handlers': ['console', 'infoFile'],
+            'propagate': True
+        },
+        'error': {
+            'level': 'ERROR',
+            'handlers': ['console', 'errorFile'],
+            'propagate': True
+        }
+    }
+}
+logging.config.dictConfig(LOGGING)
+debugLogger = logging.getLogger('debug')
+infoLogger = logging.getLogger('info')
+errorLogger = logging.getLogger('error')
 
-    def __init__(self,logLevel):
-        # 如果日志目录不存在,新建一个
-        self.__mkdirs()
-
-        # 初始化日志 --- applog.debu
-        self.baseFilename = "%s-%s.log" % (os.path.join(logDirPath, logName),logLevel)
-
-        # 设置日志半夜切割
-        fileHandler = logging.handlers.TimedRotatingFileHandler(self.baseFilename, when='midnight', interval=1, backupCount=LOG_EXPIRATION_TIME, encoding=None)
-        # fileHandler.suffix = "%Y-%m-%d"
-        fileHandler.setFormatter(formatter)
-        logger.addHandler(fileHandler)
-
-    def __mkdirs(self):
-        if not os.path.exists(logDirPath):
-            try:
-                os.makedirs(logDirPath)
-            except Exception as e:
-                print(str(e))
-
-    def info(self,msg):
-        logger.info(msg)
-
-    def warn(self,msg):
-        logger.warn(msg)
-
-    def debug(self,msg):
-        logger.debug(msg)
-
-    def error(self,msg):
-        logger.error(msg)
-
-def add(logLevel,param='',msg=''):
-    entireLog = '%s %s'%(str(param),msg)
-    Logger(logLevel).info(entireLog)
 
 def info(msg):
-    Logger('info').info(msg)
-
-
-def warn(msg):
-    Logger('warn').warn(msg)
-
+    infoLogger.info(msg)
 
 def debug(msg):
-    Logger('debug').debug(msg)
+    debugLogger.debug(msg)
 
 
 def error(msg):
-    Logger('error').error(msg)
+    errorLogger.error(msg)

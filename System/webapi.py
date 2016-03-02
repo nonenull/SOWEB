@@ -3,11 +3,12 @@
 from StringIO import StringIO
 from urlparse import parse_qs
 from Cheetah.Template import Template
-import os, sys, re, cgi, time, gzip
+import os, sys, re, cgi, time, gzip, socket
 from helper import Helper
-from Config import config
+from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_TYPES, TRIM, \
+    TRIM_TYPES
 import select
-import log as logger
+import log as logging
 
 Helper = Helper()
 Helper.createPath()
@@ -18,231 +19,40 @@ _staticDirPath = Helper.staticDirPath
 _cacheDirPath = Helper.cacheDirPath
 _memoryCacheDirPath = Helper.memoryCacheDirName
 
-_contentType = {
-    '323': 'text/h323',
-    'acx': 'application/internet-property-stream',
-    'ai': 'application/postscript',
-    'aif': 'audio/x-aiff',
-    'aifc': 'audio/x-aiff',
-    'aiff': 'audio/x-aiff',
-    'asf': 'video/x-ms-asf',
-    'asr': 'video/x-ms-asf',
-    'asx': 'video/x-ms-asf',
-    'au': 'audio/basic',
-    'avi': 'video/x-msvideo',
-    'axs': 'application/olescript',
-    'bas': 'text/plain',
-    'bcpio': 'application/x-bcpio',
-    'bin': 'application/octet-stream',
-    'bmp': 'image/bmp',
-    'c': 'text/plain',
-    'cat': 'application/vnd.ms-pkiseccat',
-    'cdf': 'application/x-cdf',
-    'cer': 'application/x-x509-ca-cert',
-    'class': 'application/octet-stream',
-    'clp': 'application/x-msclip',
-    'cmx': 'image/x-cmx',
-    'cod': 'image/cis-cod',
-    'cpio': 'application/x-cpio',
-    'crd': 'application/x-mscardfile',
-    'crl': 'application/pkix-crl',
-    'crt': 'application/x-x509-ca-cert',
-    'csh': 'application/x-csh',
-    'css': 'text/css',
-    'dcr': 'application/x-director',
-    'der': 'application/x-x509-ca-cert',
-    'dir': 'application/x-director',
-    'dll': 'application/x-msdownload',
-    'dms': 'application/octet-stream',
-    'doc': 'application/msword',
-    'dot': 'application/msword',
-    'dvi': 'application/x-dvi',
-    'dxr': 'application/x-director',
-    'eps': 'application/postscript',
-    'etx': 'text/x-setext',
-    'evy': 'application/envoy',
-    'exe': 'application/octet-stream',
-    'fif': 'application/fractals',
-    'flr': 'x-world/x-vrml',
-    'gif': 'image/gif',
-    'gtar': 'application/x-gtar',
-    'gz': 'application/x-gzip',
-    'h': 'text/plain',
-    'hdf': 'application/x-hdf',
-    'hlp': 'application/winhlp',
-    'hqx': 'application/mac-binhex40',
-    'hta': 'application/hta',
-    'htc': 'text/x-component',
-    'htm': 'text/html',
-    'html': 'text/html',
-    'htt': 'text/webviewhtml',
-    'ico': 'image/x-icon',
-    'ief': 'image/ief',
-    'iii': 'application/x-iphone',
-    'ins': 'application/x-internet-signup',
-    'isp': 'application/x-internet-signup',
-    'jfif': 'image/pipeg',
-    'jpe': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'jpg': 'image/jpeg',
-    'js': 'application/x-javascript',
-    'latex': 'application/x-latex',
-    'lha': 'application/octet-stream',
-    'lsf': 'video/x-la-asf',
-    'lsx': 'video/x-la-asf',
-    'lzh': 'application/octet-stream',
-    'm13': 'application/x-msmediaview',
-    'm14': 'application/x-msmediaview',
-    'm3u': 'audio/x-mpegurl',
-    'man': 'application/x-troff-man',
-    'mdb': 'application/x-msaccess',
-    'me': 'application/x-troff-me',
-    'mht': 'message/rfc822',
-    'mhtml': 'message/rfc822',
-    'mid': 'audio/mid',
-    'mny': 'application/x-msmoney',
-    'mov': 'video/quicktime',
-    'movie': 'video/x-sgi-movie',
-    'mp2': 'video/mpeg',
-    'mp3': 'audio/mpeg',
-    'mpa': 'video/mpeg',
-    'mpe': 'video/mpeg',
-    'mpeg': 'video/mpeg',
-    'mpg': 'video/mpeg',
-    'mpp': 'application/vnd.ms-project',
-    'mpv2': 'video/mpeg',
-    'ms': 'application/x-troff-ms',
-    'mvb': 'application/x-msmediaview',
-    'nws': 'message/rfc822',
-    'oda': 'application/oda',
-    'p10': 'application/pkcs10',
-    'p12': 'application/x-pkcs12',
-    'p7b': 'application/x-pkcs7-certificates',
-    'p7c': 'application/x-pkcs7-mime',
-    'p7m': 'application/x-pkcs7-signature',
-    'p7r': 'application/x-pkcs7-certreqresp',
-    'p7s': 'application/x-pkcs7-signature',
-    'pbm': 'image/x-portable-bitmap',
-    'pdf': 'application/x-pkcs12',
-    'pfx': 'application/x-pkcs12',
-    'pgm': 'image/x-portable-graymap',
-    'pko': 'application/ynd.ms-pkipko',
-    'pma': 'application/x-perfmon',
-    'pmc': 'application/x-perfmon',
-    'pml': 'application/x-perfmon',
-    'pmr': 'application/x-perfmon',
-    'pmw': 'application/x-perfmon',
-    'pnm': 'image/x-portable-anymap',
-    'pot': 'application/vnd.ms-powerpoint',
-    'ppm': 'image/x-portable-pixmap',
-    'pps': 'application/vnd.ms-powerpoint',
-    'ppt': 'application/vnd.ms-powerpoint',
-    'prf': 'application/pics-rules',
-    'ps': 'application/postscript',
-    'pub': 'application/x-mspublisher',
-    'qt': 'video/quicktime',
-    'ra': 'audio/x-pn-realaudio',
-    'ram': 'audio/x-pn-realaudio',
-    'ras': 'image/x-cmu-raster',
-    'rgb': 'image/x-rgb',
-    'rmi': 'audio/mid',
-    'roff': 'application/x-troff',
-    'rtf': 'application/rtf',
-    'rtx': 'text/richtext',
-    'scd': 'application/x-msschedule',
-    'sct': 'text/scriptlet',
-    'setpay': 'application/set-payment-initiation',
-    'setreg': 'application/set-registration-initiation',
-    'sh': 'application/x-sh',
-    'shar': 'application/x-shar',
-    'sit': 'application/x-stuffit',
-    'snd': 'audio/basic',
-    'spc': 'application/x-pkcs7-certificates',
-    'spl': 'application/futuresplash',
-    'src': 'application/x-wais-source',
-    'sst': 'application/vnd.ms-pkicertstore',
-    'stl': 'application/vnd.ms-pkistl',
-    'stm': 'text/html',
-    'svg': 'image/svg+xml',
-    'sv4cpio': 'application/x-sv4cpio',
-    'sv4crc': 'application/x-sv4crc',
-    'swf': 'application/x-shockwave-flash',
-    't': 'application/x-troff',
-    'tar': 'application/x-tar',
-    'tcl': 'application/x-tcl',
-    'tex': 'application/x-tex',
-    'texi': 'application/x-texinfo',
-    'texinfo': 'application/x-texinfo',
-    'tgz': 'application/x-compressed',
-    'tif': 'image/tiff',
-    'tiff': 'image/tiff',
-    'tr': 'application/x-troff',
-    'trm': 'application/x-msterminal',
-    'tsv': 'text/tab-separated-values',
-    'txt': 'text/plain',
-    'uls': 'text/iuls',
-    'ustar': 'application/x-ustar',
-    'vcf': 'text/x-vcard',
-    'vrml': 'x-world/x-vrml',
-    'wav': 'audio/x-wav',
-    'wcm': 'application/vnd.ms-works',
-    'wdb': 'application/vnd.ms-works',
-    'wks': 'application/vnd.ms-works',
-    'wmf': 'application/x-msmetafile',
-    'wps': 'application/vnd.ms-works',
-    'wri': 'application/x-mswrite',
-    'wrl': 'x-world/x-vrml',
-    'wrz': 'x-world/x-vrml',
-    'xaf': 'x-world/x-vrml',
-    'xbm': 'image/x-xbitmap',
-    'xla': 'application/vnd.ms-excel',
-    'xlc': 'application/vnd.ms-excel',
-    'xlm': 'application/vnd.ms-excel',
-    'xls': 'application/vnd.ms-excel',
-    'xlt': 'application/vnd.ms-excel',
-    'xlw': 'application/vnd.ms-excel',
-    'xof': 'x-world/x-vrml',
-    'xpm': 'image/x-xpixmap',
-    'xwd': 'image/x-xwindowdump',
-    'z': 'application/x-compress',
-    'zip': 'application/zip'
-}
 
-_responseStatusDic = {
-    200: 'OK', 201: 'Created', 202: 'Accepted', 206: 'Partial Content',
-    301: 'Moved Permanently', 302: 'Found', 303: 'See Other', 304: 'Not Modified', 307: 'Temporary Redirect',
-    400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed',
-    406: 'Not Acceptable', 409: 'Conflict', 410: 'Gone', 412: 'Precondition Failed', 415: 'Unsupported Media Type',
-    500: 'InternalError'
-}
-
-
-class WebApi(object):
-    def __init__(self):
-        # 初始化response
-
-        self.httpVersion = 'HTTP/1.1'
-
-        self.requestUri = '/'
-        self.controller = config.CONTROLLER
+class WebApi:
+    def __init__(self, epollFd, fd, connParam=''):
+        # 设置默认的控制器
+        self.controller = CONTROLLER
 
         # 请求头
         self.requestHeaders = {}
 
-        # 预设响应头
+        # 初始化response 信息
+        self.httpVersion = 'HTTP/1.1'
+        self.requestUri = '/'
+
+        # 初始化响应头
         self.responseHeaders = {}
         self.responseStatus = 200
         self.responseText = ''
-        self.responseHeaders["Content-Type"] = "text/html;charset=utf-8"
-        self.responseHeaders["Connection"] = "keep-alive"
+        self.responseHeaders["Content-Type"] = 'text/html'
+        self.responseHeaders["Connection"] = 'keep-alive'
+        self.responseHeaders['Keep-Alive'] = 'timeout=%d' % KEEP_ALIVE_TIMEOUT
 
         self.action = 'index'
         self.getDic = {}
         self.form = None
         self.postDic = {}
         self.data = {}
+        self.__epollFd = epollFd
+        self.__clientFd = fd
+        # 开始响应过程
+        if connParam:
+            self.process(connParam)
 
-    def parsing(self, requestData):
+    # 解析请求数据
+    def parse(self, requestData):
         '''
             GET /fuck HTTP/1.1
             Host: 172.16.190.132:8888
@@ -270,18 +80,20 @@ class WebApi(object):
         # 按照空格切割 ‘GET /fuck HTTP/1.1’
         self.requestMethod, self.requestUri, self.httpVersion = re.split('\s+', headerFirstLine)
 
-        # /controller/action?xxx=xxx
+        # 根据?切割,有get参数的情况下 /controller/action?xxx=xxx
         splitRequestUri = self.requestUri.split('?')
-        # print splitRequestUri
+
+        # 如果大于1,说明?后面有get参数
         if len(splitRequestUri) > 1:
             self.baseUri, self.paramStr = splitRequestUri
         else:
+            # /controller/action
             self.baseUri = splitRequestUri[0]
             self.requestParamStr = None
 
         splitRequestUri = self.baseUri.split('/')
         self.__filePrefixName, self.__fileExtName = os.path.splitext(splitRequestUri[-1])
-        # print(splitRequestUri)
+
         # 截取controller和action
         self.__getControllerAndAction(splitRequestUri)
 
@@ -289,6 +101,7 @@ class WebApi(object):
             # 过滤空行
             if item.strip() == "":
                 continue
+
             # 获取key的索引值
             segindex = item.find(":")
 
@@ -301,7 +114,7 @@ class WebApi(object):
         methodLower = self.requestMethod.lower()
 
         if methodLower == "get" and "?" in self.requestUri:
-            # 获取GET 的参数和值
+            # 获取?后面的的参数和值
             if self.getDic:
                 self.getDic = dict(parse_qs(self.paramStr), **self.getDic)
             else:
@@ -324,11 +137,16 @@ class WebApi(object):
             splitRequestUri.remove('')
 
         splitRequestUriLen = len(splitRequestUri)
+
+        # logging.debug('splitRequestUriLen %d ' % splitRequestUriLen)
         # 有controller和action或者GET param的情况
         if splitRequestUriLen >= 2:
+
             # 获取controller和action，并删除，剩下的就是GET参数
             self.controller = splitRequestUri.pop(0)
+            # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
             self.action = splitRequestUri.pop(0)
+            # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
             i = 1
             for param in splitRequestUri:
                 if param.strip() is not '':
@@ -374,37 +192,14 @@ class WebApi(object):
 
         return templateHtml
 
-    # 拼接Header，响应报文
-    def __startResponse(self):
-        try:
-            # 例如 403 Forbidden
-            httpStatus = "%d %s" % (self.responseStatus, _responseStatusDic.get(self.responseStatus))
-            headStr = ''
-
-            # 获取响应内容长度
-            responseTextLen = len(self.responseText)
-            self.responseHeaders["Content-Length"] = responseTextLen
-            self.data['responseTextLen'] = responseTextLen
-
-            # 拼接Header
-            for key in self.responseHeaders:
-                headStr += "%s: %s\r\n" % (key, self.responseHeaders[key])
-            self.data["responseData"] = "%s %s\r\n%s\r\n%s" % (self.httpVersion, httpStatus, headStr, self.responseText)
-
-            del self.data["requestData"]
-            self._epollFd.modify(self._fd,select.EPOLLET | select.EPOLLOUT)
-
-        except Exception as e:
-            logger.error(e)
-            pass
-
     def __sendResponseFile(self):
 
         # 判断静态文件是否存在
         def isStaticFileExist():
             if not os.path.exists(staticFileFullPath):
-                self.responseText = "resource file does not exist"
-                self.responseStatus = 404
+                # self.responseText = "resource file does not exist"
+                # self.responseStatus = 404
+                self.fastResponse(404)
                 return False
 
         def isCacheDirExist():
@@ -426,32 +221,36 @@ class WebApi(object):
             self.responseHeaders['Last-Modified'] = fileModifyTimeStr
             self.responseHeaders['ETag'] = fileModifyTime
             self.responseHeaders['Date'] = currentTimeStr
+
             # 设置Content-Type
-            self.responseHeaders['Content-Type'] = _contentType.get(extName)
+            self.responseHeaders['Content-Type'] = CONTENT_TYPE.get(extName)
 
             # 根据配置设置缓存时间
-            if config.CACHE_TIME == 0:
+            if CACHE_TIME == 0:
                 self.responseHeaders['Cache-Control'] = 'no-cache'
             else:
-                self.responseHeaders['Cache-Control'] = 'max-age=%d' % config.CACHE_TIME
+                self.responseHeaders['Cache-Control'] = 'max-age=%d' % CACHE_TIME
 
         def isNeedTrim():
             # 如果配置了TRIM,自动去除html,css,js中的注释以及重复的空白符（\n，\r，\t，' '）,否则直接读取静态文件
-            if config.TRIM and extName in ['css', 'html', 'js']:
+            if TRIM and self.responseHeaders.get('Content-Type') in TRIM_TYPES:
                 if not os.path.exists(self.__trimFileFullPath) or os.path.getmtime(
                         self.__trimFileFullPath) < fileModifyTime:
                     trimFileData = Helper.trimFile(staticFileFullPath)
                     trimFileFd = open(self.__trimFileFullPath, 'w')
                     trimFileFd.write(trimFileData)
                     trimFileFd.close()
+                return True
+            else:
+                return False
 
         # 判断是否需要gzip压缩
         def isNeedGzip():
-            # 开启Gzip
-            if self.responseHeaders.get('Content-Type') in config.GZIP_TYPES and config.GZIP:
+            # 判断配置中gzip是否已开启,且请求文件在允许gzip压缩的列表中
+            if self.responseHeaders.get('Content-Type') in GZIP_TYPES and GZIP:
                 if not os.path.exists(self.__gzipFileFullPath) or os.path.getmtime(
                         self.__gzipFileFullPath) < fileModifyTime:
-                    if config.TRIM:
+                    if TRIM:
                         file = self.__trimFileFullPath
                     else:
                         file = staticFileFullPath
@@ -464,6 +263,55 @@ class WebApi(object):
                     gZipFileFd = gzip.open(self.__gzipFileFullPath, 'wb')
                     gZipFileFd.write(staticFileData)
                     gZipFileFd.close()
+
+                    # 添加一个response头显示资源已经gzip压缩
+                    self.responseHeaders['Content-Encoding'] = 'gzip'
+                return True
+            else:
+                return False
+
+        # 处理分段传输,断点续传
+        def rangeResponse():
+            rangeValue = self.requestHeaders["Range"].strip(' \r\n')
+            rangeValue = rangeValue.replace("bytes=", "")
+
+            # 获取请求数据的范围
+            rangeStart, rangeEnd = rangeValue.split('-')
+
+            # 如果范围rangeEnd为空，则rangeEnd修改为文件大小(因为初始是0，所以大小-1)
+            if rangeEnd == '':
+                rangeEnd = fileSize - 1
+
+            rangeStart = int(rangeStart)
+            rangeEnd = int(rangeEnd)
+
+            self.responseHeaders['Accept-Ranges'] = 'bytes'
+            self.responseStatus = 206
+            self.responseHeaders['Content-Range'] = 'bytes %s-%s/%s' % (rangeStart, rangeEnd, fileSize)
+            # 偏移量
+            offset = rangeStart
+
+            # 请求的分段数据总长度
+            partLen = rangeEnd - rangeStart + 1
+            # logging.debug('长度 %d' % partLen)
+
+            if partLen < 0:
+                partLen = 0
+
+            self.responseHeaders['Content-Length'] = partLen
+
+            staticFile = open(staticFileFullPath)
+
+            # 设置文件的当前位置偏移,从偏移量开始读取数据
+            staticFile.seek(offset)
+            readlen = 10240
+            if readlen > partLen:
+                readlen = partLen
+
+            firstdata = staticFile.read(readlen)
+            self.responseText += firstdata
+            partLen -= len(firstdata)
+
 
         # 逻辑开始
         try:
@@ -504,104 +352,79 @@ class WebApi(object):
             # 初始化部分Header
             initHeader()
 
-            # 判断是否需要缓存trim文件
-            isNeedTrim()
+            # 判断是否缓存trim文件
+            isTrim = isNeedTrim()
 
-            # 判断是否需要缓存gzip文件
-            isNeedGzip()
+            # 判断是否缓存gzip文件
+            isGzip = isNeedGzip()
 
-            if config.GZIP:
+            if isGzip:
                 staticFileFullPath = self.__gzipFileFullPath
-                self.responseHeaders['Content-Encoding'] = 'gzip'
-            elif config.TRIM:
+            elif isTrim:
                 staticFileFullPath = self.__trimFileFullPath
 
             # 获取文件大小
             fileSize = os.path.getsize(staticFileFullPath)
+            self.data['connections'].setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, fileSize)
+            # self.data['connections'].setsockopt(socket.SOL_SOCKET, socket.TCP_NODELAY, 1)
+            # 打开文件
+            staticFile = open(staticFileFullPath)
 
             # Range 只请求实体的一部分，指定范围 ---- 即断点续传
             if "Range" in self.requestHeaders:
-                rangeValue = self.requestHeaders["Range"].strip(' \r\n')
-                rangeValue = rangeValue.replace("bytes=", "")
-
-                # 获取请求数据的范围
-                rangeStart, rangeEnd = rangeValue.split('-')
-
-                # 如果范围rangeEnd为空，则rangeEnd修改为文件大小(因为初始是0，所以大小-1)
-                if rangeEnd == '':
-                    rangeEnd = fileSize - 1
-
-                rangeStart = int(rangeStart)
-                rangeEnd = int(rangeEnd)
-
-                self.responseHeaders['Accept-Ranges'] = 'bytes'
-                self.responseStatus = 206
-                self.responseHeaders['Content-Range'] = 'bytes %s-%s/%s' % (rangeStart, rangeEnd, fileSize)
+                rangeResponse()
             else:
-                rangeStart = 0
-                rangeEnd = fileSize - 1
+                # rangeStart = 0
+                # rangeEnd = fileSize - 1
+                #
+                # # 偏移量
+                # offset = rangeStart
+                #
+                # # 请求的分段数据总长度
+                # partLen = rangeEnd - rangeStart + 1
+                # # logging.debug('长度 %d' % partLen)
+                #
+                # if partLen < 0:
+                #     partLen = 0
+                #
+                # self.responseHeaders['Content-Length'] = partLen
+                #
+                # staticFile = open(staticFileFullPath)
+                #
+                # # 设置文件的当前位置偏移,从偏移量开始读取数据
+                # staticFile.seek(offset)
+                # readlen = 10240
+                # if readlen > partLen:
+                #     readlen = partLen
 
-            # 偏移量
-            offset = rangeStart
-
-            # 请求的分段数据总长度
-            partLen = rangeEnd - rangeStart + 1
-            # logger.debug('长度 %d' % partLen)
-
-            if partLen < 0:
-                partLen = 0
-
-            self.responseHeaders['Content-Length'] = partLen
-
-            staticFile = open(staticFileFullPath)
-
-            # 设置文件的当前位置偏移,从偏移量开始读取数据
-            staticFile.seek(offset)
-            readlen = 102400
-            if readlen > partLen:
-                readlen = partLen
-
-            firstdata = staticFile.read(readlen)
-            self.responseText += firstdata
-            partLen -= len(firstdata)
+                self.responseText = staticFile.read()
+                self.__startResponse()
 
         except Exception as e:
-            logger.error(str(e) + Helper.getTraceStackMsg())
-            self.responseStatus = 500
-            self.responseText = "load resource file fail"
-            pass
-
+            self.fastResponse(500)
+            logging.error(str(e) + Helper.getTraceStackMsg())
         finally:
-            self.__startResponse()
             if staticFile:
                 staticFile.close()
+            pass
 
     # 处理
-    def process(self, data, epollFd, fd):
+    def process(self, data):
         self.data = data
-        self._epollFd = epollFd
-        self._fd = fd
         try:
-            # _logger.debug('request总数据 %s' % data['requestData'])
-            self.parsing(data['requestData'])
-
-        except Exception as e:
-
-            self.responseStatus = 500
-            self.responseText = "Initializes the request failed"
-            logger.error(str(e) + Helper.getTraceStackMsg())
-
-        try:
-
+            # 开始解析request header
+            self.parse(data['requestData'])
+            # 判断是否请求网站图标
             if self.requestUri == "/favicon.ico":
                 self.requestUri = "/" + _staticDirPath + self.requestUri
 
-            # 判断是否静态文件，判断URI是否含有Cache，Static或者favicon.ico
+            # 判断是否静态文件，判断URI是否含有Cache，Static或者favicon.ico,如果为True,不往后执行
             if _staticDirPath in self.requestUri or "favicon.ico" in self.requestUri:
                 self.__sendResponseFile()
-                return None
+                return
 
-            controller = _actionDic.get(self.controller, None)
+            # 开始处理动态内容
+            controller = _actionDic.get(self.controller)
 
             # 判断URL中没有controller的情况
             if controller == None:
@@ -626,20 +449,79 @@ class WebApi(object):
             if actionReturn:
                 self.responseText = str(actionReturn)
 
-            # 如果配置了gzip
-            if config.GZIP and len(self.responseText) > 1024:
+            # 如果配置了gzip,且大小超过1K
+            if GZIP and len(self.responseText) > 1024:
                 self.responseText = Helper.responseGzip(self.responseText)
 
-        except Exception as e:
-            logger.error(str(e) + Helper.getTraceStackMsg())
-            self.responseStatus = 500
-            self.responseText = "Internal Error"
-
-        try:
-            if self.responseHeaders.get("Connection", "") != "close":
-                data["keepalive"] = True
-
             self.__startResponse()
+        except ImportError as message:
+            self.fastResponse(404)
+            logging.error(str(message) + Helper.getTraceStackMsg())
+            pass
+        except Exception as message:
+            self.fastResponse(500)
+            logging.error(str(message) + Helper.getTraceStackMsg())
+        finally:
+            pass
 
-        except Exception as e:
-            logger.error(str(e) + Helper.getTraceStackMsg())
+    # 拼接Header，响应报文
+    def __startResponse(self):
+        try:
+
+            self.responseHeaders["Content-Type"] = self.responseHeaders["Content-Type"] + ';charset=utf-8'
+
+            # 例如 403 Forbidden
+            httpStatus = "%d %s" % (self.responseStatus, STATUS.get(self.responseStatus))
+            headStr = ''
+
+            # 获取响应内容长度
+            responseTextLen = len(self.responseText)
+            '''
+             随着SNDBUF增大，send()返回已发送字节越大。接收窗口大小对结果影响不是线性的。实际已接收的只有窗口大小。
+             在no blocking的情况下,发送的数据大于缓存区会导致客户端只能接受到部分数据
+            '''
+
+            self.responseHeaders["Content-Length"] = responseTextLen
+            self.data['responseTextLen'] = responseTextLen
+
+            # 拼接Header
+            for key in self.responseHeaders:
+                headStr += "%s: %s\r\n" % (key, self.responseHeaders[key])
+            self.data['responseData'] = "%s %s\r\n%s\r\n%s" % (self.httpVersion, httpStatus, headStr, self.responseText)
+
+            # 设置响应数据准备完成的时间
+            self.data['waitTime'] = time.time()
+
+            # 如果请求头不包含close,即代表开启keepalived
+            if self.responseHeaders.get("Connection", "") != "close":
+                self.data["keepalive"] = True
+
+            # 删掉request请求数据
+            if self.data.has_key('requestData'):
+                del self.data['requestData']
+
+            self.modifyEpollEvent()
+        except Exception as message:
+            logging.error('WebApi - startResponse  : %s' % str(message) + Helper.getTraceStackMsg())
+        finally:
+            pass
+
+    # 快速生成响应数据并响应
+    def fastResponse(self, httpStatusCode, responseText=''):
+        self.responseStatus = httpStatusCode
+        self.responseHeaders["Content-Type"] = 'text/html;charset=utf-8'
+        if responseText:
+            self.responseText = responseText
+        else:
+            self.responseText = STATUS.get(httpStatusCode)
+
+        self.__startResponse()
+
+    # 修改epoll事件
+    def modifyEpollEvent(self):
+        try:
+            self.__epollFd.modify(self.__clientFd, select.EPOLLET | select.EPOLLOUT)
+        except Exception as message:
+            logging.error('WebApi - modifyEpollEvent : %s' % message + Helper.getTraceStackMsg())
+        finally:
+            pass

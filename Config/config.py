@@ -11,7 +11,7 @@ PORT = 8888
 LISTEN = 10240
 
 # 启动进程数量,设置为0将根据cpu核心数来创建
-PROCESSES_NUM = 1
+PROCESSES_NUM = 3
 
 # 设置单个进程启动的线程数量，线程总数 = PROCESSES_NUM * THREADS_NUM
 THREADS_NUM = 1

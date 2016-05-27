@@ -1,0 +1,6 @@
+.idea/
+logs/
+Cache/
+test*
+*/*.pyc
+*.pyc

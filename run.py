@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-from System import server
+from System.server import Server
 
 if __name__ == "__main__":
-    server.Run()
+    Server()

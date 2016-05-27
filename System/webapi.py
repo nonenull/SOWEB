@@ -5,8 +5,9 @@ from urlparse import parse_qs
 from Cheetah.Template import Template
 import os, sys, re, cgi, time, gzip, socket
 from helper import Helper
-from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_TYPES, TRIM, \
-    TRIM_TYPES
+from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_LEVEL, \
+    GZIP_MIN_LENGTH, GZIP_TYPES, TRIM, \
+    TRIM_TYPES, CHUNKED_MIN_LENGTH
 import select
 import log as logging
 
@@ -22,6 +23,7 @@ _memoryCacheDirPath = Helper.memoryCacheDirName
 
 class WebApi:
     def __init__(self, epollFd, fd, connParam=''):
+        logging.debug('%d - 开始解析http请求'%fd)
         # 设置默认的控制器
         self.controller = CONTROLLER
 
@@ -44,7 +46,7 @@ class WebApi:
         self.getDic = {}
         self.form = None
         self.postDic = {}
-        self.data = {}
+        self.connParam = connParam
         self.__epollFd = epollFd
         self.__clientFd = fd
         # 开始响应过程
@@ -161,13 +163,24 @@ class WebApi:
             self.controller = 'index'
             self.action = 'index'
 
-    # gzip压缩文件,如果文件是
-    def gzipAndTrim(self):
-        def gzipFile():
-            pass
+    # 删除文件中的 注释,空格,换行符,制表符
+    def trim(self, file):
+        fileFd = open(file)
+        data = fileFd.read()
 
-        def trimFile():
-            pass
+        # 设置 匹配注释 正则表达式
+        annotationReg = re.compile('(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)')
+
+        # 设置 匹配空格,换行符,制表符 正则表达式
+        spaceReg = re.compile('\s+')
+
+        # 去掉注释
+        annotationTrimData = re.sub(annotationReg, '', data)
+
+        # 再去掉 空格,换行符,制表符
+        spaceTrimData = re.sub(spaceReg, '', annotationTrimData)
+        fileFd.close()
+        return spaceTrimData
 
     def input(self, method=None):
         if method == 'get':
@@ -197,11 +210,9 @@ class WebApi:
         # 判断静态文件是否存在
         def isStaticFileExist():
             if not os.path.exists(staticFileFullPath):
-                # self.responseText = "resource file does not exist"
-                # self.responseStatus = 404
                 self.fastResponse(404)
-                return False
 
+        # 判断缓存文件是否存在
         def isCacheDirExist():
             dir, filename = os.path.split(cacheFileFullPath)
             if not os.path.exists(dir):
@@ -214,7 +225,6 @@ class WebApi:
                 self.responseHeaders['Last-Modified'] = fileModifyTimeStr
                 self.responseHeaders['ETag'] = fileModifyTime
                 self.responseHeaders['Date'] = currentTimeStr
-                return False
 
         # 初始化部分Header
         def initHeader():
@@ -231,12 +241,13 @@ class WebApi:
             else:
                 self.responseHeaders['Cache-Control'] = 'max-age=%d' % CACHE_TIME
 
+        # 判断是否需要删除空格和换行符
         def isNeedTrim():
             # 如果配置了TRIM,自动去除html,css,js中的注释以及重复的空白符（\n，\r，\t，' '）,否则直接读取静态文件
             if TRIM and self.responseHeaders.get('Content-Type') in TRIM_TYPES:
                 if not os.path.exists(self.__trimFileFullPath) or os.path.getmtime(
                         self.__trimFileFullPath) < fileModifyTime:
-                    trimFileData = Helper.trimFile(staticFileFullPath)
+                    trimFileData = self.trim(staticFileFullPath)
                     trimFileFd = open(self.__trimFileFullPath, 'w')
                     trimFileFd.write(trimFileData)
                     trimFileFd.close()
@@ -248,6 +259,7 @@ class WebApi:
         def isNeedGzip():
             # 判断配置中gzip是否已开启,且请求文件在允许gzip压缩的列表中
             if self.responseHeaders.get('Content-Type') in GZIP_TYPES and GZIP:
+                # 如果gzip缓存文件不存在或者已经过期,重新生成
                 if not os.path.exists(self.__gzipFileFullPath) or os.path.getmtime(
                         self.__gzipFileFullPath) < fileModifyTime:
                     if TRIM:
@@ -264,8 +276,8 @@ class WebApi:
                     gZipFileFd.write(staticFileData)
                     gZipFileFd.close()
 
-                    # 添加一个response头显示资源已经gzip压缩
-                    self.responseHeaders['Content-Encoding'] = 'gzip'
+                # 添加一个response头显示资源已经gzip压缩
+                self.responseHeaders['Content-Encoding'] = 'gzip'
                 return True
             else:
                 return False
@@ -312,10 +324,42 @@ class WebApi:
             self.responseText += firstdata
             partLen -= len(firstdata)
 
+        def generateResponseText():
+            staticFileData = staticFile.read()
+            bufferSize = fileSize/4
+            beginOffset = 0
+            endOffset = bufferSize
+            first = True
+            if chunked:
+                while 1:
+                    offsetData = staticFileData[beginOffset:endOffset]
 
-        # 逻辑开始
+                    # 取data长度的16进制
+                    offsetDataLen = hex(bufferSize)[2:]
+                    if self.responseText:
+                        self.responseText = '%s%s\r\n%s\n' % (self.responseText, offsetDataLen, offsetData)
+                    else:
+                        self.responseText = '%s\n%s\r\n' % (offsetDataLen, offsetData)
+
+                    beginOffset = endOffset
+                    endOffset = beginOffset + bufferSize
+
+                    if endOffset > fileSize:
+                        endOffset = fileSize
+                        bufferSize = endOffset - beginOffset
+                    elif endOffset == fileSize:
+                        break
+
+            else:
+                self.responseText = staticFileData
+
+
+        '''
+         逻辑由此开始
+        '''
         try:
             staticFile = None
+            chunked = None
             # 获取静态文件路径
             staticFileFullPath = self.baseUri[self.baseUri.find(_staticDirPath) + 0:]
 
@@ -327,8 +371,8 @@ class WebApi:
             self.__trimFileFullPath = cacheFileFullPath + '-trim'
             self.__gzipFileFullPath = cacheFileFullPath + '-gzip'
 
-            if isStaticFileExist() == False:
-                return
+            # 判断文件是否存在,不存在报404
+            isStaticFileExist()
 
             # 过期时间
             lastTimeStr = self.requestHeaders.get("If-Modified-Since", None)
@@ -343,8 +387,7 @@ class WebApi:
             currentTimeStr = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(time.time()))
 
             # 检查缓存是否到期
-            if isFileCacheExpiry() == False:
-                return
+            isFileCacheExpiry()
 
             # 后缀去掉.符号
             extName = self.__fileExtName.replace('.', '')
@@ -358,6 +401,8 @@ class WebApi:
             # 判断是否缓存gzip文件
             isGzip = isNeedGzip()
 
+            # logging.debug('Header %s'%str(self.responseHeaders))
+
             if isGzip:
                 staticFileFullPath = self.__gzipFileFullPath
             elif isTrim:
@@ -365,8 +410,17 @@ class WebApi:
 
             # 获取文件大小
             fileSize = os.path.getsize(staticFileFullPath)
-            self.data['connections'].setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, fileSize)
-            # self.data['connections'].setsockopt(socket.SOL_SOCKET, socket.TCP_NODELAY, 1)
+            '''
+             随着SNDBUF增大，send()返回已发送字节越大。接收窗口大小对结果影响不是线性的。实际已接收的只有窗口大小。
+             在no blocking的情况下,发送的数据大于缓存区会导致客户端只能接受到部分数据
+             如果文件大小大于1M,设置当前socket的发送缓冲区为fileSize的一半
+            '''
+            if fileSize > CHUNKED_MIN_LENGTH and CHUNKED_MIN_LENGTH > 0:
+                self.responseHeaders['Transfer-Encoding'] = 'chunked'
+                chunked = True
+                self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, fileSize*2)
+                self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.TCP_NODELAY, 1)
+
             # 打开文件
             staticFile = open(staticFileFullPath)
 
@@ -374,46 +428,28 @@ class WebApi:
             if "Range" in self.requestHeaders:
                 rangeResponse()
             else:
-                # rangeStart = 0
-                # rangeEnd = fileSize - 1
-                #
-                # # 偏移量
-                # offset = rangeStart
-                #
-                # # 请求的分段数据总长度
-                # partLen = rangeEnd - rangeStart + 1
-                # # logging.debug('长度 %d' % partLen)
-                #
-                # if partLen < 0:
-                #     partLen = 0
-                #
-                # self.responseHeaders['Content-Length'] = partLen
-                #
-                # staticFile = open(staticFileFullPath)
-                #
-                # # 设置文件的当前位置偏移,从偏移量开始读取数据
-                # staticFile.seek(offset)
-                # readlen = 10240
-                # if readlen > partLen:
-                #     readlen = partLen
+                generateResponseText()
 
-                self.responseText = staticFile.read()
-                self.__startResponse()
+        except OSError as message:
+            self.fastResponse(404)
+            logging.error(message)
 
-        except Exception as e:
+        except Exception as message:
             self.fastResponse(500)
-            logging.error(str(e) + Helper.getTraceStackMsg())
+            logging.error(message)
+        else:
+            self.__startResponse()
         finally:
             if staticFile:
                 staticFile.close()
             pass
 
     # 处理
-    def process(self, data):
-        self.data = data
+    def process(self, connParam):
         try:
             # 开始解析request header
-            self.parse(data['requestData'])
+            self.parse(connParam['requestData'])
+
             # 判断是否请求网站图标
             if self.requestUri == "/favicon.ico":
                 self.requestUri = "/" + _staticDirPath + self.requestUri
@@ -422,7 +458,6 @@ class WebApi:
             if _staticDirPath in self.requestUri or "favicon.ico" in self.requestUri:
                 self.__sendResponseFile()
                 return
-
             # 开始处理动态内容
             controller = _actionDic.get(self.controller)
 
@@ -450,17 +485,21 @@ class WebApi:
                 self.responseText = str(actionReturn)
 
             # 如果配置了gzip,且大小超过1K
-            if GZIP and len(self.responseText) > 1024:
-                self.responseText = Helper.responseGzip(self.responseText)
+            if GZIP and len(self.responseText) > GZIP_MIN_LENGTH:
+                buf = StringIO()
+                f = gzip.GzipFile(mode='wb', fileobj=buf, compresslevel=GZIP_LEVEL)
+                f.write(self.responseText)
+                f.close()
+                # self.responseText = gzip.GzipFile(data=self.responseText, compresslevel=8)
 
             self.__startResponse()
         except ImportError as message:
             self.fastResponse(404)
-            logging.error(str(message) + Helper.getTraceStackMsg())
+            logging.error(message)
             pass
         except Exception as message:
             self.fastResponse(500)
-            logging.error(str(message) + Helper.getTraceStackMsg())
+            logging.error(Exception, message)
         finally:
             pass
 
@@ -476,33 +515,40 @@ class WebApi:
 
             # 获取响应内容长度
             responseTextLen = len(self.responseText)
-            '''
-             随着SNDBUF增大，send()返回已发送字节越大。接收窗口大小对结果影响不是线性的。实际已接收的只有窗口大小。
-             在no blocking的情况下,发送的数据大于缓存区会导致客户端只能接受到部分数据
-            '''
 
-            self.responseHeaders["Content-Length"] = responseTextLen
-            self.data['responseTextLen'] = responseTextLen
+
+            # Transfer-Encoding 和 Content-Length 不可共存
+            if not self.responseHeaders.has_key('Transfer-Encoding'):
+                self.responseHeaders["Content-Length"] = responseTextLen
+
+            self.connParam['responseTextLen'] = responseTextLen
 
             # 拼接Header
             for key in self.responseHeaders:
                 headStr += "%s: %s\r\n" % (key, self.responseHeaders[key])
-            self.data['responseData'] = "%s %s\r\n%s\r\n%s" % (self.httpVersion, httpStatus, headStr, self.responseText)
+
+            # 拼接完整response
+            self.connParam['responseData'] = "%s %s\r\n%s\n%s" % (
+                self.httpVersion, httpStatus, headStr, self.responseText)
+            # f = open('logs/test.txt','a')
+            # f.write(self.responseText)
+            # f.close()
+            # logging.debug(self.connParam['responseData'])
 
             # 设置响应数据准备完成的时间
-            self.data['waitTime'] = time.time()
+            self.connParam['waitTime'] = time.time()
 
             # 如果请求头不包含close,即代表开启keepalived
             if self.responseHeaders.get("Connection", "") != "close":
-                self.data["keepalive"] = True
+                self.connParam["keepalive"] = True
 
-            # 删掉request请求数据
-            if self.data.has_key('requestData'):
-                del self.data['requestData']
+            # # 删掉request请求数据
+            # if self.connParam.has_key('requestData'):
+            #     del self.connParam['requestData']
 
             self.modifyEpollEvent()
         except Exception as message:
-            logging.error('WebApi - startResponse  : %s' % str(message) + Helper.getTraceStackMsg())
+            logging.error('WebApi - startResponse  : %s' % message)
         finally:
             pass
 
@@ -522,6 +568,6 @@ class WebApi:
         try:
             self.__epollFd.modify(self.__clientFd, select.EPOLLET | select.EPOLLOUT)
         except Exception as message:
-            logging.error('WebApi - modifyEpollEvent : %s' % message + Helper.getTraceStackMsg())
+            logging.error('WebApi - modifyEpollEvent : %s' % message)
         finally:
             pass

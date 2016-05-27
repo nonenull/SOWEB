@@ -1,0 +1,606 @@
+2016-03-09 11:43:47,133 - network-server - DEBUG - accept connection from 192.168.1.151, 54917, fd = 6
+2016-03-09 11:43:47,133 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:26,460 - network-server - DEBUG - 192.168.1.151, 54917 closed
+2016-03-09 11:44:26,474 - network-server - DEBUG - accept connection from 192.168.1.151, 54937, fd = 6
+2016-03-09 11:44:26,476 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:26,477 - network-server - DEBUG - accept connection from 192.168.1.151, 54938, fd = 7
+2016-03-09 11:44:26,478 - network-server - DEBUG - 7 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:27,999 - network-server - DEBUG - 192.168.1.151, 54937 closed
+2016-03-09 11:44:28,008 - network-server - DEBUG - accept connection from 192.168.1.151, 54939, fd = 6
+2016-03-09 11:44:28,009 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:28,020 - network-server - DEBUG - accept connection from 192.168.1.151, 54940, fd = 8
+2016-03-09 11:44:28,023 - network-server - DEBUG - 8 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:29,372 - network-server - DEBUG - 192.168.1.151, 54939 closed
+2016-03-09 11:44:29,382 - network-server - DEBUG - accept connection from 192.168.1.151, 54942, fd = 6
+2016-03-09 11:44:29,383 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:29,384 - network-server - DEBUG - accept connection from 192.168.1.151, 54943, fd = 9
+2016-03-09 11:44:29,384 - network-server - DEBUG - 9 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:30,581 - network-server - DEBUG - 192.168.1.151, 54942 closed
+2016-03-09 11:44:30,601 - network-server - DEBUG - accept connection from 192.168.1.151, 54944, fd = 6
+2016-03-09 11:44:30,602 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:30,603 - network-server - DEBUG - accept connection from 192.168.1.151, 54945, fd = 10
+2016-03-09 11:44:30,604 - network-server - DEBUG - 10 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:31,738 - network-server - DEBUG - 192.168.1.151, 54944 closed
+2016-03-09 11:44:31,759 - network-server - DEBUG - accept connection from 192.168.1.151, 54947, fd = 6
+2016-03-09 11:44:31,760 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:31,761 - network-server - DEBUG - accept connection from 192.168.1.151, 54948, fd = 11
+2016-03-09 11:44:31,762 - network-server - DEBUG - 11 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:44:32,685 - network-server - DEBUG - 192.168.1.151, 54947 closed
+2016-03-09 11:44:32,704 - network-server - DEBUG - accept connection from 192.168.1.151, 54949, fd = 6
+2016-03-09 11:44:32,705 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:44:33,737 - network-server - DEBUG - 192.168.1.151, 54949 closed
+2016-03-09 11:44:33,738 - network-server - DEBUG - accept connection from 192.168.1.151, 54950, fd = 6
+2016-03-09 11:44:33,739 - network-server - DEBUG - 6 receive GET /favicon.ico HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+
+2016-03-09 11:45:32,751 - network-server - DEBUG - accept connection from 192.168.1.151, 54974, fd = 6
+2016-03-09 11:45:32,751 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:45:34,452 - network-server - DEBUG - 192.168.1.151, 54974 closed
+2016-03-09 11:45:37,612 - network-server - DEBUG - accept connection from 192.168.1.151, 54976, fd = 6
+2016-03-09 11:45:37,613 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:12,397 - network-server - DEBUG - 192.168.1.151, 54976 closed
+2016-03-09 11:46:13,438 - network-server - DEBUG - accept connection from 192.168.1.151, 54991, fd = 6
+2016-03-09 11:46:13,439 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:18,846 - network-server - DEBUG - accept connection from 192.168.1.151, 54997, fd = 6
+2016-03-09 11:46:18,847 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:45,569 - network-server - DEBUG - accept connection from 192.168.1.151, 55015, fd = 6
+2016-03-09 11:46:45,570 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:46,168 - network-server - DEBUG - accept connection from 192.168.1.151, 55016, fd = 6
+2016-03-09 11:46:46,168 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:46,430 - network-server - DEBUG - accept connection from 192.168.1.151, 55017, fd = 6
+2016-03-09 11:46:46,431 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:46,616 - network-server - DEBUG - accept connection from 192.168.1.151, 55018, fd = 6
+2016-03-09 11:46:46,617 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:46,807 - network-server - DEBUG - accept connection from 192.168.1.151, 55019, fd = 6
+2016-03-09 11:46:46,808 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:47,003 - network-server - DEBUG - accept connection from 192.168.1.151, 55020, fd = 6
+2016-03-09 11:46:47,004 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:47,201 - network-server - DEBUG - accept connection from 192.168.1.151, 55021, fd = 6
+2016-03-09 11:46:47,203 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:47,433 - network-server - DEBUG - accept connection from 192.168.1.151, 55022, fd = 6
+2016-03-09 11:46:47,434 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:47,630 - network-server - DEBUG - accept connection from 192.168.1.151, 55023, fd = 6
+2016-03-09 11:46:47,631 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:47,823 - network-server - DEBUG - accept connection from 192.168.1.151, 55025, fd = 6
+2016-03-09 11:46:47,824 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:48,032 - network-server - DEBUG - accept connection from 192.168.1.151, 55026, fd = 6
+2016-03-09 11:46:48,032 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:48,288 - network-server - DEBUG - accept connection from 192.168.1.151, 55027, fd = 6
+2016-03-09 11:46:48,289 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:48,533 - network-server - DEBUG - accept connection from 192.168.1.151, 55028, fd = 6
+2016-03-09 11:46:48,533 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:48,751 - network-server - DEBUG - accept connection from 192.168.1.151, 55029, fd = 6
+2016-03-09 11:46:48,752 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:48,992 - network-server - DEBUG - accept connection from 192.168.1.151, 55030, fd = 6
+2016-03-09 11:46:48,995 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:49,215 - network-server - DEBUG - accept connection from 192.168.1.151, 55031, fd = 6
+2016-03-09 11:46:49,216 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:49,448 - network-server - DEBUG - accept connection from 192.168.1.151, 55032, fd = 6
+2016-03-09 11:46:49,449 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:49,713 - network-server - DEBUG - accept connection from 192.168.1.151, 55033, fd = 6
+2016-03-09 11:46:49,713 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:49,935 - network-server - DEBUG - accept connection from 192.168.1.151, 55034, fd = 6
+2016-03-09 11:46:49,936 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:50,184 - network-server - DEBUG - accept connection from 192.168.1.151, 55035, fd = 6
+2016-03-09 11:46:50,184 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:50,407 - network-server - DEBUG - accept connection from 192.168.1.151, 55036, fd = 6
+2016-03-09 11:46:50,407 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:50,630 - network-server - DEBUG - accept connection from 192.168.1.151, 55037, fd = 6
+2016-03-09 11:46:50,631 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:50,831 - network-server - DEBUG - accept connection from 192.168.1.151, 55038, fd = 6
+2016-03-09 11:46:50,832 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:51,066 - network-server - DEBUG - accept connection from 192.168.1.151, 55039, fd = 6
+2016-03-09 11:46:51,067 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:51,303 - network-server - DEBUG - accept connection from 192.168.1.151, 55041, fd = 6
+2016-03-09 11:46:51,304 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:51,521 - network-server - DEBUG - accept connection from 192.168.1.151, 55042, fd = 6
+2016-03-09 11:46:51,522 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:51,775 - network-server - DEBUG - accept connection from 192.168.1.151, 55043, fd = 6
+2016-03-09 11:46:51,776 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:52,002 - network-server - DEBUG - accept connection from 192.168.1.151, 55044, fd = 6
+2016-03-09 11:46:52,002 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:52,191 - network-server - DEBUG - accept connection from 192.168.1.151, 55045, fd = 6
+2016-03-09 11:46:52,192 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:52,412 - network-server - DEBUG - accept connection from 192.168.1.151, 55046, fd = 6
+2016-03-09 11:46:52,412 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:52,641 - network-server - DEBUG - accept connection from 192.168.1.151, 55047, fd = 6
+2016-03-09 11:46:52,641 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:52,860 - network-server - DEBUG - accept connection from 192.168.1.151, 55048, fd = 6
+2016-03-09 11:46:52,860 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:53,060 - network-server - DEBUG - accept connection from 192.168.1.151, 55049, fd = 6
+2016-03-09 11:46:53,060 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:53,252 - network-server - DEBUG - accept connection from 192.168.1.151, 55050, fd = 6
+2016-03-09 11:46:53,253 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:53,463 - network-server - DEBUG - accept connection from 192.168.1.151, 55051, fd = 6
+2016-03-09 11:46:53,463 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:53,673 - network-server - DEBUG - accept connection from 192.168.1.151, 55052, fd = 6
+2016-03-09 11:46:53,675 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:53,880 - network-server - DEBUG - accept connection from 192.168.1.151, 55053, fd = 6
+2016-03-09 11:46:53,880 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:54,112 - network-server - DEBUG - accept connection from 192.168.1.151, 55054, fd = 6
+2016-03-09 11:46:54,112 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:54,363 - network-server - DEBUG - accept connection from 192.168.1.151, 55055, fd = 6
+2016-03-09 11:46:54,364 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:54,537 - network-server - DEBUG - accept connection from 192.168.1.151, 55057, fd = 6
+2016-03-09 11:46:54,538 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:54,776 - network-server - DEBUG - accept connection from 192.168.1.151, 55058, fd = 6
+2016-03-09 11:46:54,777 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:55,016 - network-server - DEBUG - accept connection from 192.168.1.151, 55059, fd = 6
+2016-03-09 11:46:55,017 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:55,238 - network-server - DEBUG - accept connection from 192.168.1.151, 55060, fd = 6
+2016-03-09 11:46:55,239 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:55,460 - network-server - DEBUG - accept connection from 192.168.1.151, 55061, fd = 6
+2016-03-09 11:46:55,460 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:55,688 - network-server - DEBUG - accept connection from 192.168.1.151, 55062, fd = 6
+2016-03-09 11:46:55,688 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:55,913 - network-server - DEBUG - accept connection from 192.168.1.151, 55063, fd = 6
+2016-03-09 11:46:55,913 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:56,103 - network-server - DEBUG - accept connection from 192.168.1.151, 55064, fd = 6
+2016-03-09 11:46:56,103 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:56,382 - network-server - DEBUG - accept connection from 192.168.1.151, 55065, fd = 6
+2016-03-09 11:46:56,383 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:56,617 - network-server - DEBUG - accept connection from 192.168.1.151, 55066, fd = 6
+2016-03-09 11:46:56,617 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:56,832 - network-server - DEBUG - accept connection from 192.168.1.151, 55067, fd = 6
+2016-03-09 11:46:56,832 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:57,079 - network-server - DEBUG - accept connection from 192.168.1.151, 55068, fd = 6
+2016-03-09 11:46:57,079 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:57,338 - network-server - DEBUG - accept connection from 192.168.1.151, 55069, fd = 6
+2016-03-09 11:46:57,338 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:57,584 - network-server - DEBUG - accept connection from 192.168.1.151, 55070, fd = 6
+2016-03-09 11:46:57,584 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:57,872 - network-server - DEBUG - accept connection from 192.168.1.151, 55071, fd = 6
+2016-03-09 11:46:57,873 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:58,108 - network-server - DEBUG - accept connection from 192.168.1.151, 55072, fd = 6
+2016-03-09 11:46:58,110 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:58,371 - network-server - DEBUG - accept connection from 192.168.1.151, 55073, fd = 6
+2016-03-09 11:46:58,372 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:46:58,568 - network-server - DEBUG - accept connection from 192.168.1.151, 55074, fd = 6
+2016-03-09 11:46:58,569 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:47:57,905 - network-server - DEBUG - accept connection from 192.168.1.151, 55102, fd = 6
+2016-03-09 11:47:57,906 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.11; rv:44.0) Gecko/20100101 Firefox/44.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Cache-Control: max-age=0
+
+
+2016-03-09 11:48:06,321 - network-server - DEBUG - accept connection from 192.168.1.151, 55111, fd = 6
+2016-03-09 11:48:06,321 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:48:27,167 - network-server - DEBUG - accept connection from 192.168.1.151, 55120, fd = 6
+2016-03-09 11:48:27,168 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:48:40,345 - network-server - DEBUG - accept connection from 192.168.1.151, 55127, fd = 6
+2016-03-09 11:48:40,345 - network-server - DEBUG - 6 receive GET / HTTP/1.1
+Host: 192.168.1.217:2003
+User-Agent: curl/7.43.0
+Accept: */*
+
+
+2016-03-09 11:49:10,362 - network-server - DEBUG - accept connection from 192.168.1.151, 55129, fd = 6
+2016-03-09 11:49:10,363 - network-server - DEBUG - accept connection from 192.168.1.151, 55130, fd = 7

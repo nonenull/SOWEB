@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging, logging.config
+from sys import _getframe, exc_info
+from traceback import format_tb
 
 LOGGING = {
     # 版本，总是1
@@ -97,13 +99,33 @@ debugLogger = logging.getLogger('debug')
 infoLogger = logging.getLogger('info')
 errorLogger = logging.getLogger('error')
 
+def getTraceStackMsg():
+    tb = exc_info()[2]
+    msg = ''
+    for i in format_tb(tb):
+        msg += i
+    return msg
 
-def info(msg):
-    infoLogger.info(msg)
 
-def debug(msg):
-    debugLogger.debug(msg)
+def getTrace():
+    # 模块名
+    moduleName = _getframe().f_back.f_back.f_globals.get('__name__')
+
+    # 函数名
+    funcName = _getframe().f_back.f_back.f_code.co_name  # 获取调用函数名
+
+    # 行数
+    lineNumber = _getframe().f_back.f_back.f_lineno  # 获取行号
+    return '[%s.%s:%d] - ' % (moduleName, funcName, lineNumber)
 
 
-def error(msg):
-    errorLogger.error(msg)
+def info(*args):
+    infoLogger.info('-'.join(map(str,args)))
+
+# DEBUG 输出 更多详细信息
+def debug(*args):
+    debugLogger.debug(getTrace() + '-'.join(map(str,args)))
+
+
+def error(*args):
+    errorLogger.error(getTrace() + '-'.join(map(str,args)) + '\n' + getTraceStackMsg())

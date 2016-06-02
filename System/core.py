@@ -39,8 +39,8 @@ class Epoll:
         # 开始处理事件
         self.epollEventHandle()
 
-
     ''' 创建EPOLL '''
+
     def createEpoll(self):
         # 开始EPOLL处理
         try:
@@ -52,6 +52,7 @@ class Epoll:
 
     def epollEventHandle(self):
         ''' 事件分拣 '''
+
         def eventSorting(events):
             fileNo, event = events
             eventsDict.get(event, self.clearFd)(fileNo)
@@ -62,7 +63,7 @@ class Epoll:
         try:
             while 1:
                 events = self.epollFd.poll()
-                logging.debug('发生事件',events)
+                logging.debug('发生事件', events)
                 map(eventSorting, events)
                 # 死循环 实时获取epoll中的事件
                 # for fileNo, event in events:
@@ -80,10 +81,11 @@ class Epoll:
     '''
      处理与客户端的连接
     '''
+
     def __epollIn(self, fd):
+
         # 如果fd等于serverFdFileNo,说明是服务端监听socket有事件发生
         if fd == self.serverFdFileNo:
-            logging.debug('epollIn')
             clientConn, clientAddr = self.serverFd.accept()
             try:
                 # 设置新的socket连接为非阻塞
@@ -106,32 +108,53 @@ class Epoll:
             logging.debug('%d - 开始接收数据' % fd)
             # 获取抓到的socket连接的信息
             connParam = self._connParams.get(fd)
-            # logging.debug(connParam)
-            # 开始接收数据
-            totalDatas = ''
-            while 1:
-                try:
-                    data = connParam['connections'].recv(config.BUFFER_SIZE)
-                    totalDatas += data
-                except socket.error as message:
-                    # 在 非阻塞 socket 上进行 recv 需要处理 读穿 的情况这里
-                    if message.errno == errno.EAGAIN:
-                        connParam['requestData'] = totalDatas
-                        connParam['recvTime'] = time.time()
-                        # logging.debug('=====================', totalDatas)
-                        # self.workerThread.apply_async(WebApi,args=(self.epollFd, fd, connParam))
-                        WebApi(self.epollFd, fd, connParam)
-                        # gevent.spawn(WebApi,self.epollFd, fd, connParam)
-                        # logging.debug('resc DATA %s'%(totalDatas))
-                        # workThread.addJob(epollFd, fd, connParam)
 
-                    else:
-                        logging.error('resv错误 %d %s' % (fd, message))
-                        self.clearFd(fd)
-                    break
-                finally:
-                    pass
-            logging.debug('塞入recv队列 - %d' % fd)
+            # 开始接收数据
+            totalDatas = []
+            try:
+                while 1:
+                    logging.debug('epollIn - 开始recv')
+                    data = connParam['connections'].recv(config.BUFFER_SIZE)
+                    if not data: break
+                    totalDatas.append(data)
+            except socket.error:
+                pass
+
+            connParam['requestData'] = ''.join(totalDatas)
+            connParam['recvTime'] = time.time()
+
+            WebApi(self.epollFd, fd, connParam)
+            # while 1:
+            #     logging.debug('======')
+            #     try:
+            #         data = connParam['connections'].recv(config.BUFFER_SIZE)
+            #         if not data:
+            #             logging.error('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            #             break
+            #         totalDatas.append(data)
+            #         totalDatas += data
+            #     # except socket.error as message:
+            #     #     # 在 非阻塞 socket 上进行 recv 需要处理 读穿 的情况这里
+            #     #     if message.errno == errno.EAGAIN:
+            #     #         connParam['requestData'] = totalDatas
+            #     #         connParam['recvTime'] = time.time()
+            #     #         # logging.debug('=====================', totalDatas)
+            #     #         # self.workerThread.apply_async(WebApi,args=(self.epollFd, fd, connParam))
+            #     #         WebApi(self.epollFd, fd, connParam)
+            #     #         # gevent.spawn(WebApi,self.epollFd, fd, connParam)
+            #     #         # logging.debug('resc DATA %s'%(totalDatas))
+            #     #         # workThread.addJob(epollFd, fd, connParam)
+            #     #
+            #     #     else:
+            #     #         logging.error('resv错误 %d %s' % (fd, message))
+            #     #         self.clearFd(fd)
+            #     except socket.error as message:
+            #         logging.error('resv错误 %d %s' % (fd, message))
+            #         self.clearFd(fd)
+            #         pass
+            #     finally:
+            #         pass
+            # logging.debug('塞入recv队列 - %d' % fd)
 
     # 发送响应数据
     def __epollOut(self, fd):

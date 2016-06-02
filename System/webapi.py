@@ -459,7 +459,7 @@ class WebApi:
         logging.debug('@@@@@@@@@@@@@@',requestData,'@@@@@@@@@@@@')
         try:
             # 开始解析request header
-            if requestData.strip() == '':
+            if requestData.strip() != '':
                 self.parse(requestData)
             else:
                 logging.debug('NONONONONONONONONONONONONO')

@@ -5,7 +5,7 @@ from urlparse import parse_qs
 from Cheetah.Template import Template
 import os, sys, re, cgi, time, gzip, socket
 from helper import Helper
-from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_LEVEL, \
+from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE,KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_LEVEL, \
     GZIP_MIN_LENGTH, GZIP_TYPES, TRIM, \
     TRIM_TYPES, CHUNKED_MIN_LENGTH
 import select
@@ -24,8 +24,6 @@ _memoryCacheDirPath = Helper.memoryCacheDirName
 class WebApi:
     def __init__(self, epollFd, fd, connParam=''):
         logging.debug('%d - 开始解析http请求'%fd)
-        # 设置默认的控制器
-        self.controller = CONTROLLER
 
         # 请求头
         self.requestHeaders = {}
@@ -39,10 +37,17 @@ class WebApi:
         self.responseStatus = 200
         self.responseText = ''
         self.responseHeaders["Content-Type"] = 'text/html'
-        self.responseHeaders["Connection"] = 'keep-alive'
-        self.responseHeaders['Keep-Alive'] = 'timeout=%d' % KEEP_ALIVE_TIMEOUT
+        if KEEP_ALIVE:
+            self.responseHeaders["Connection"] = 'keep-alive'
+            self.responseHeaders['Keep-Alive'] = 'timeout=%d' % KEEP_ALIVE_TIMEOUT
+        else:
+            self.responseHeaders["Connection"] = 'close'
 
+        # 设置默认的控制器
+        self.controller = CONTROLLER
+        # 默认action
         self.action = 'index'
+
         self.getDic = {}
         self.form = None
         self.postDic = {}
@@ -67,8 +72,10 @@ class WebApi:
 
 
         '''
+        logging.debug(requestData)
         headend = requestData.find("\r\n\r\n")
         rfile = ""
+        logging.debug(headend)
         if headend > 0:
             rfile = requestData[headend + 4:]
             headList = requestData[0:headend].split("\r\n")
@@ -233,7 +240,9 @@ class WebApi:
             self.responseHeaders['Date'] = currentTimeStr
 
             # 设置Content-Type
-            self.responseHeaders['Content-Type'] = CONTENT_TYPE.get(extName)
+            contentType = CONTENT_TYPE.get(extName)
+            if contentType:
+                self.responseHeaders['Content-Type'] = contentType
 
             # 根据配置设置缓存时间
             if CACHE_TIME == 0:
@@ -446,9 +455,16 @@ class WebApi:
 
     # 处理
     def process(self, connParam):
+        requestData = connParam['requestData']
+        logging.debug('@@@@@@@@@@@@@@',requestData,'@@@@@@@@@@@@')
         try:
             # 开始解析request header
-            self.parse(connParam['requestData'])
+            if requestData.strip() == '':
+                self.parse(requestData)
+            else:
+                logging.debug('NONONONONONONONONONONONONO')
+                self.fastResponse(500)
+                return
 
             # 判断是否请求网站图标
             if self.requestUri == "/favicon.ico":
@@ -499,7 +515,7 @@ class WebApi:
             pass
         except Exception as message:
             self.fastResponse(500)
-            logging.error(Exception, message)
+            logging.error(message.args, message)
         finally:
             pass
 

@@ -92,10 +92,11 @@ class ThreadPool:
     # 创建线程
     def __createThreadPool(self, numOfThreads):
         #
-        taskDic = {'timeout': TimeoutTasksThread, 'worker': WorkTasksThread}
+        # taskDic = {'timeout': TimeoutTasksThread, 'worker': WorkTasksThread}
 
         for i in xrange(numOfThreads):
-            thread = taskDic.get(self.role)(self.threadCondition, self.queue)
+            # thread = taskDic.get(self.role)(self.threadCondition, self.queue)
+            thread = WorkTasksThread(self.threadCondition, self.queue)
             self.threads.append(thread)
 
     def start(self):

@@ -106,8 +106,9 @@ class Epoll:
                 pass
 
             connParam['requestData'] = ''.join(data.decode('utf-8') for data in totalDatas)
+            if '\r\n\r\n' not in connParam['requestData']:
+                self.clearFd(fd)
             connParam['recvTime'] = time.time()
-            # self.workerThread.addJob(self.epollFd, fd, connParam)
             self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
 
     '''

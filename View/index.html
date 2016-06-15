@@ -1,9 +1,12 @@
-<html>
-<head>
-
-</head>
-<body>
-名称是:$title
-内容是:$contents
-</body>
-</html>
+<table>
+  <tbody>
+<?py i = 0 ?>
+<?py for item in ['<foo>', 'bar&bar', '"baz"']: ?>
+<?py     i += 1 ?>
+    <tr>
+      <td>#{item}</td>
+      <td>${item}</td>
+    </tr>
+<?py #end ?>
+  <tbody>
+</table>

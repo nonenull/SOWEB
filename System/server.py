@@ -1,20 +1,13 @@
 # -*- coding: utf-8 -*-
-import socket, os, sys, signal, compileall
-from multiprocessing import cpu_count, Process
-from  Config.config import HOST, PORT, LISTEN, DAEMON, PROCESSES_NUM
+import os, sys, signal,socket,compileall
+from multiprocessing import cpu_count,Process
+from  Config.config import HOST, PORT, BACKLOG, DAEMON, PROCESSES_NUM
 from System import log as logging
 from System.core import Epoll
 
-# 防止编码冲突
-reload(sys)
-sys.setdefaultencoding('utf8')
-
-compileall.compile_dir(r'./', quiet=1)
-# compileall.compile_dir(r'./', quiet=1)
-
-
 class Server:
     def __init__(self):
+        compileall.compile_dir(r'./', quiet=1)
         # 创建socket监听服务
         self.createSocketServer()
 
@@ -40,10 +33,11 @@ class Server:
             serverFd.bind((HOST, PORT))
 
             # 开始监听TCP传入连接。backlog指定在拒绝连接之前，操作系统可以挂起的最大连接数量。该值至少为1，大部分应用程序设为5就可以了。
-            serverFd.listen(LISTEN)
+            serverFd.listen(BACKLOG)
 
             # 如果flag为0，则将套接字设为非阻塞模式，否则将套接字设为阻塞模式（默认值）。非阻塞模式下，如果调用recv()没有发现任何数据，或send()调用无法立即发送数据，那么将引起socket.error异常。
             serverFd.setblocking(0)
+            serverFd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         except socket.error as message:
             logging.error('监听服务失败,请检查端口冲突,或者查看是否重复运行 %s' % message)
@@ -56,9 +50,11 @@ class Server:
         else:
             num = PROCESSES_NUM
 
-        map(self.forkProcess(),xrange(num))
+        for i in range(num):
+            self.forkProcess()
 
     def forkProcess(self):
+        print('create')
         # 创建工作子进程
         p = Process(target=Epoll, args=(self.serverFd,))
         p.daemon = True

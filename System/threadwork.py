@@ -1,13 +1,12 @@
 # -*- coding:utf-8 -*-
 
-import threading, Queue, time
-from webapi import WebApi
-import log as logging
-from helper import Helper
+import threading, time, eventlet
+import System.log as logging
 from Config.config import TIMEOUT
+from multiprocessing import Queue
 
-Helper = Helper()
-
+ # #初始化一个线程池专门负责处理epoll event
+workerPool = eventlet.GreenPool(10)
 
 class WorkTasksThread(threading.Thread):
     def __init__(self, threadCondition, queue, **kwargs):
@@ -18,12 +17,13 @@ class WorkTasksThread(threading.Thread):
 
     def processer(self, args):
         try:
-            #self.epollFd, fd, connParam
+            # self.epollFd, fd, connParam
             epollFd = args[0]
             fd = args[1]
             connParam = args[2]
             # 处理请求，并生成response数据
-            WebApi(epollFd, fd, connParam)
+            workerPool.spawn_n(WebApi, epollFd, fd, connParam)
+            # WebApi(epollFd, fd, connParam)
         except Exception as message:
             logging.error("WorkTasksThread error: %s  %s" % (message))
         finally:
@@ -36,6 +36,7 @@ class WorkTasksThread(threading.Thread):
                 self.processer(args)
             except Queue.Empty:
                 continue
+
 
 class TimeoutTasksThread(threading.Thread):
     def __init__(self, threadCondition, queue, **kwargs):
@@ -81,8 +82,8 @@ class TimeoutTasksThread(threading.Thread):
                 logging.error("timeout thread error")
 
 
-class ThreadPool:
-    def __init__(self, numOfThreads=10, role='worker'):
+class workerThreadPool:
+    def __init__(self, numOfThreads=2, role='worker'):
         self.threadCondition = threading.Condition()
         self.role = role
         self.queue = Queue.Queue()
@@ -94,7 +95,7 @@ class ThreadPool:
         #
         # taskDic = {'timeout': TimeoutTasksThread, 'worker': WorkTasksThread}
 
-        for i in xrange(numOfThreads):
+        for i in range(numOfThreads):
             # thread = taskDic.get(self.role)(self.threadCondition, self.queue)
             thread = WorkTasksThread(self.threadCondition, self.queue)
             self.threads.append(thread)
@@ -104,4 +105,5 @@ class ThreadPool:
             thread.start()
 
     def addJob(self, *args, **kwargs):
-        self.queue.put((args, kwargs))
+        self.queue.put_nowait((args, kwargs))
+        # print(self.queue.qsize())

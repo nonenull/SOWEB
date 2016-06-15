@@ -1,16 +1,10 @@
 # -*- coding:utf-8 -*-
 
-import errno, time, os, compileall, select, threading, socket
-import Queue
+import time, os, socket, select
 from Config import config
 from System import log as logging
-from System.helper import Helper
-from threadwork import ThreadPool
-from webapi import WebApi
-
-''' 执行Helper类中的初始准备工作 '''
-Helper = Helper()
-Helper.addSysPath()
+from multiprocessing.dummy import Pool as ThreadPool
+from System.webapi import WebApi
 
 
 class Epoll:
@@ -20,10 +14,11 @@ class Epoll:
         self._connParams = {}
         self.childProcess = {}
         self.pid = os.getpid()
+        self.workerPool = ThreadPool(config.THREADS_NUM)
 
         # 初始化线程
-        self.workThread = ThreadPool(config.THREADS_NUM)
-        self.workThread.start()
+        # self.workerThread = workerThreadPool(config.THREADS_NUM)
+        # self.workerThread.start()
 
         # 创建epoll,注册事件
         self.createEpoll()
@@ -31,42 +26,44 @@ class Epoll:
         # 开始处理事件
         self.epollEventHandle()
 
-    ''' 创建EPOLL '''
+    '''
+        创建EPOLL
+    '''
 
     def createEpoll(self):
         # 开始EPOLL处理
         try:
             # 创建epoll并且注册事件
-            self.epollFd = epollFd = select.epoll(config.WORKER_CONNECTIONS)
-            epollFd.register(self.serverFdFileNo, select.EPOLLIN)
+            self.epollFd = select.epoll()
+            self.epollFd.register(self.serverFdFileNo, select.EPOLLIN)
         except select.error as message:
             logging.error('createEpoll错误 %s' % message)
 
+    '''
+        使用map来处理时间的分发
+    '''
+
     def epollEventHandle(self):
-        ''' 事件分拣 '''
 
-        def eventSorting(events):
-            fileNo, event = events
-            eventsDict.get(event, self.clearFd)(fileNo)
-
-        ''' 使用map '''
         eventsDict = {select.EPOLLIN: self.__epollIn, select.EPOLLOUT: self.__epollOut}
 
         try:
             while 1:
                 events = self.epollFd.poll()
                 logging.debug('发生事件', events)
-                map(eventSorting, events)
                 # 死循环 实时获取epoll中的事件
-                # for fileNo, event in events:
-                #     eventsDict.get(event, self.clearFd)(fileNo)
+                for fileNo, event in events:
+                    eventsDict.get(event, self.clearFd)(fileNo)
+
         except KeyError as message:
             # 变量dict以外的事件不处理
             logging.error(
                 '进程ID:%d - epollEventHandle() - 事件超出范围 - 错误代码: %s ' % (self.pid, message))
+
         except Exception as message:
             logging.error(
                 '进程ID:%d - epollEventHandle() - 错误代码: %s ' % (self.pid, message))
+
         finally:
             pass
 
@@ -75,7 +72,6 @@ class Epoll:
     '''
 
     def __epollIn(self, fd):
-
         # 如果fd等于serverFdFileNo,说明是服务端监听socket有事件发生
         if fd == self.serverFdFileNo:
             clientConn, clientAddr = self.serverFd.accept()
@@ -83,6 +79,7 @@ class Epoll:
                 # 设置新的socket连接为非阻塞
                 clientConn.setblocking(0)
                 clientConn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # 获取新连接的文件描述符
                 clientFd = clientConn.fileno()
                 logging.debug('accept到新的client连接 -%d %s' % (clientFd, clientAddr))
                 acceptTime = time.time()
@@ -93,10 +90,6 @@ class Epoll:
                 # 因为是多个进程竞争,所以其它进程会收到socket错误,需要忽略掉
                 pass
         else:
-            # 根据config配置决定是否更新pyc文件
-            if config.AUTO_RELOAD:
-                compileall.compile_dir(r'./', quiet=1)
-
             logging.debug('%d - 开始接收数据' % fd)
             # 获取抓到的socket连接的信息
             connParam = self._connParams.get(fd)
@@ -106,18 +99,21 @@ class Epoll:
             try:
                 while 1:
                     logging.debug('epollIn - 开始recv')
-                    data = connParam['connections'].recv(config.BUFFER_SIZE)
+                    data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
                     if not data: break
                     totalDatas.append(data)
             except socket.error:
                 pass
 
-            connParam['requestData'] = ''.join(totalDatas)
+            connParam['requestData'] = ''.join(data.decode('utf-8') for data in totalDatas)
             connParam['recvTime'] = time.time()
-            self.workThread.addJob(self.epollFd, fd, connParam)
-            # WebApi(self.epollFd, fd, connParam)
+            # self.workerThread.addJob(self.epollFd, fd, connParam)
+            self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
 
-    # 发送响应数据
+    '''
+        发送响应数据
+    '''
+
     def __epollOut(self, fd):
         logging.debug('%d - %d -  开始send数据 -----------' % (fd, self.pid))
         # print self._connParams,self._connParams.get(fd)
@@ -126,16 +122,16 @@ class Epoll:
 
         # 获取响应数据
         responseData = responseParam.get('responseData')
-
+        logging.debug('=====', responseData)
         if not responseData:
-            logging.error('responseData为空  下面将执行clearFd()' % fd)
+            logging.error('responseData为空  %d将执行clearFd() ' % fd)
             self.clearFd(fd)
+            return
 
         currentClientConn = responseParam['connections']
-
         try:
             # sendDataToClient()
-            currentClientConn.sendall(responseData)
+            currentClientConn.sendall(responseData.encode('utf-8'))
             # while sendLen <= responseDataLen:
             #     sendLen = currentClientConn.sendto(responseData,addr)
         except socket.error as message:
@@ -158,7 +154,10 @@ class Epoll:
         finally:
             pass
 
-    # 清空fd相关连接和变量
+    '''
+       清空fd相关连接和变量
+    '''
+
     def clearFd(self, fd):
         try:
             self.epollFd.unregister(fd)

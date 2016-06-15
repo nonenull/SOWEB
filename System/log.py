@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
-import logging, logging.config
+import logging, logging.config,datetime
 from sys import _getframe, exc_info
 from traceback import format_tb
+from Config.config import LOG_LEVEL
+
+ENUM = {
+'ERROR' : 0,
+'WARNING' : 1,
+'INFO' : 2,
+'DEBUG' : 3
+}
 
 LOGGING = {
     # 版本，总是1
@@ -11,8 +19,7 @@ LOGGING = {
         'verbose': {'format': '%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s'},
         'simple': {'format': '%(levelname)s %(message)s'},
         'default': {
-            'format': '%(asctime)s %(levelname)s %(message)s',
-            'datefmt': '%Y-%m-%d %H:%M:%S'
+            'format': '%(asctime)s %(levelname)s %(message)s'
         }
     },
     'handlers': {
@@ -120,12 +127,15 @@ def getTrace():
 
 
 def info(*args):
-    infoLogger.info('-'.join(map(str,args)))
+    if ENUM.get(LOG_LEVEL) >= ENUM.get('INFO'):
+        infoLogger.info(' '.join(map(str,args)))
 
 # DEBUG 输出 更多详细信息
 def debug(*args):
-    debugLogger.debug(getTrace() + '-'.join(map(str,args)))
+    if ENUM.get(LOG_LEVEL) >= ENUM.get('DEBUG'):
+        debugLogger.debug(getTrace() + ' '.join(map(str,args)))
 
 
 def error(*args):
-    errorLogger.error(getTrace() + '-'.join(map(str,args)) + '\n' + getTraceStackMsg())
+    if ENUM.get(LOG_LEVEL) >= ENUM.get('ERROR'):
+        errorLogger.error(getTrace() + ' '.join(map(str,args)) + '\n' + getTraceStackMsg())

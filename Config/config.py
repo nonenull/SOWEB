@@ -8,7 +8,7 @@ HOST = ''
 PORT = 8888
 
 # 允许等待连接队列的最大长度
-LISTEN = 10240
+BACKLOG = 1024
 
 # 启动进程数量,设置为0将根据cpu核心数来创建
 PROCESSES_NUM = 1
@@ -20,10 +20,10 @@ THREADS_NUM = 1
 WORKER_CONNECTIONS = 655350
 
 # 设置缓冲区大小
-BUFFER_SIZE = 1024
+SNT_BUFFER_SIZE = 1024
 
 # 设置缓冲区大小
-RCV_BUFFER_SIZE = 16 * 1024
+RCV_BUFFER_SIZE = 1024
 
 # 是否gzip压缩 html,css,js 图片
 GZIP = False
@@ -35,8 +35,7 @@ GZIP_MIN_LENGTH = 1024
 GZIP_LEVEL = 8
 
 # 需要开启压缩的文件类型
-GZIP_TYPES = (
-'text/html', 'application/x-javascript', 'text/css', 'text/javascript', 'image/jpeg', 'image/gif', 'image/png')
+GZIP_TYPES = ('text/html', 'application/x-javascript', 'text/css', 'text/javascript', 'image/jpeg', 'image/gif', 'image/png')
 
 # 自动去除html,css,js中的注释以及重复的空白符【\n，\r，\t，' '】 ---------  只有html, css, js才可以执行TRIM
 TRIM = True
@@ -56,16 +55,16 @@ CONTROLLER = 'index'
 # 连接超时时间
 TIMEOUT = 1
 
-# keep-alive超时时间设置 --- 多少秒钟没有请求就关闭端口
-KEEP_ALIVE_TIMEOUT = 3
+# 是否开启keepalive
+KEEP_ALIVE = False
 
-# 开发模式下可以用，实时更新代码
-AUTO_RELOAD = False
+# keep-alive超时时间设置 --- 多少秒钟没有请求就关闭端口
+KEEP_ALIVE_TIMEOUT = 30
 
 # 后台运行模式
 DAEMON = False
 
-# 日志级别 'ERROR' > 'WARNING' > 'INFO' > 'DEBUG'
+# 日志级别 'ERROR' > 'INFO' > 'DEBUG'
 LOG_LEVEL = 'INFO'
 
 LOG_FORMAT = '$remote_addr - $remote_user [$time_local] "$request" ''$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" "$http_x_forwarded_for"'
@@ -260,7 +259,8 @@ CONTENT_TYPE = {
     'xpm': 'image/x-xpixmap',
     'xwd': 'image/x-xwindowdump',
     'z': 'application/x-compress',
-    'zip': 'application/zip'
+    'zip': 'application/zip',
+    'unknown':'application/octet-stream'
 }
 
 STATUS = {

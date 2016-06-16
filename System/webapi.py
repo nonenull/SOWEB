@@ -1,31 +1,38 @@
 # -*- coding:utf-8 -*-
 
-from StringIO import StringIO
-from urlparse import parse_qs
-from Cheetah.Template import Template
-import os, sys, re, cgi, time, gzip, socket
-from helper import Helper
-from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, GZIP_LEVEL, \
+from io import StringIO
+from imp import reload
+from urllib.parse import parse_qs
+
+import tenjin
+from tenjin.helpers import *
+from tenjin.html import *
+
+import os, sys, re, cgi, time, gzip, socket, select
+from System.helper import Helper
+import System.log as logging
+from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, \
+    GZIP_LEVEL, \
     GZIP_MIN_LENGTH, GZIP_TYPES, TRIM, \
     TRIM_TYPES, CHUNKED_MIN_LENGTH
-import select
-import log as logging
 
-Helper = Helper()
-Helper.createPath()
+Help = Helper()
+Help.createPath()
+Help.addSysPath()
+Help.getControllerInfo()
+
 # 执行Helper类
-_actionDic = Helper.actionDic
-_actionTime = Helper.actionTime
-_staticDirPath = Helper.staticDirPath
-_cacheDirPath = Helper.cacheDirPath
-_memoryCacheDirPath = Helper.memoryCacheDirName
+_ctlPath = Help.ctlPath
+_ctlImportDic = Help.ctlImportDic
+_ctlModifyMTimeDic = Help.ctlModifyMTimeDic
+_staticDirPath = Help.staticDirPath
+_cacheDirPath = Help.cacheDirPath
+_memoryCacheDirPath = Help.memoryCacheDirName
 
 
 class WebApi:
     def __init__(self, epollFd, fd, connParam=''):
-        logging.debug('%d - 开始解析http请求'%fd)
-        # 设置默认的控制器
-        self.controller = CONTROLLER
+        logging.debug('%d - 开始解析http请求' % fd)
 
         # 请求头
         self.requestHeaders = {}
@@ -38,23 +45,93 @@ class WebApi:
         self.responseHeaders = {}
         self.responseStatus = 200
         self.responseText = ''
-        self.responseHeaders["Content-Type"] = 'text/html'
-        self.responseHeaders["Connection"] = 'keep-alive'
-        self.responseHeaders['Keep-Alive'] = 'timeout=%d' % KEEP_ALIVE_TIMEOUT
+        self.responseHeaders["Content-Type"] = 'text/html;charset=utf-8'
+        if KEEP_ALIVE:
+            self.responseHeaders["Connection"] = 'keep-alive'
+            self.responseHeaders['Keep-Alive'] = 'timeout=%d' % KEEP_ALIVE_TIMEOUT
+        else:
+            self.responseHeaders["Connection"] = 'close'
 
+        # 设置默认的控制器
+        self.controller = CONTROLLER
+        # 默认action
         self.action = 'index'
-        self.getDic = {}
-        self.form = None
-        self.postDic = {}
+
+        self.getParamsDic = {}
+        self.requestForm = None
+        self.postParamsDic = {}
         self.connParam = connParam
         self.__epollFd = epollFd
         self.__clientFd = fd
-        # 开始响应过程
-        if connParam:
-            self.process(connParam)
 
-    # 解析请求数据
-    def parse(self, requestData):
+        # 开始解析 header 和 body
+        logging.debug('++++++++++++++++',time.time())
+        self.__parse(connParam['requestData'])
+        logging.debug('----------------',time.time())
+        # 开始准备响应工作
+        # 判断请求网站图标,如果是重新生成图标位置
+        if self.requestUri == "/favicon.ico":
+            self.requestUri = "/" + _staticDirPath + self.requestUri
+
+        # 判断是静态文件还是动态文件
+        if _staticDirPath in self.requestUri or "favicon.ico" in self.requestUri:
+            self.__handleStaticFile()
+        else:
+            self.__handledynamicFile()
+        logging.debug('****************',time.time())
+    '''
+        解析请求数据
+    '''
+
+    def __parse(self, requestData):
+
+        # 将header解析成dic存起来
+        def saveResquestHeader(headerList):
+            for item in headerList:
+                # 过滤空行
+                if item.strip() == "":
+                    continue
+
+                # 获取key的索引值
+                segindex = item.find(":")
+
+                if segindex < 0:
+                    continue
+                key = item[0:segindex].strip()
+                value = item[segindex + 1:].strip()
+                self.requestHeaders[key] = value
+
+                # 获取控制器和动作
+
+        def getControllerAndAction(splitRequestUri):
+            # 删除所有空元素
+            while '' in splitRequestUri:
+                splitRequestUri.remove('')
+
+            splitRequestUriLen = len(splitRequestUri)
+
+            # 有controller和action或者GET param的情况
+            if splitRequestUriLen >= 2:
+
+                # 获取controller和action，并删除，剩下的就是GET参数
+                self.controller = splitRequestUri.pop(0)
+                # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
+                self.action = splitRequestUri.pop(0)
+                # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
+                i = 1
+                for param in splitRequestUri:
+                    if param.strip() is not '':
+                        self.getParamsDic[i] = param
+                        i = i + 1
+
+            elif splitRequestUriLen == 1:
+                self.controller = splitRequestUri[0]
+                self.action = 'index'
+
+            else:
+                self.controller = 'index'
+                self.action = 'index'
+
         '''
             GET /fuck HTTP/1.1
             Host: 172.16.190.132:8888
@@ -67,20 +144,26 @@ class WebApi:
 
 
         '''
-        headend = requestData.find("\r\n\r\n")
-        rfile = ""
-        if headend > 0:
-            rfile = requestData[headend + 4:]
-            headList = requestData[0:headend].split("\r\n")
-        else:
-            headList = requestData.split("\r\n")
+        try:
+            # 获取 header 和 body
+            header, requestBody = requestData.split("\r\n\r\n", 1)
+            headerList = header.split("\r\n")
+            # 将header解析成dic存起来
+            saveResquestHeader(headerList)
+        except ValueError as message:
+            self.fastResponse(500)
+            logging.error('@@@@@@@@@@@@@@',requestData)
+            logging.error(message)
+            return
 
-        self.rfile = StringIO(rfile)
-        headerFirstLine = headList.pop(0)
+        # 获取request 请求信息
+        headerFirstLine = headerList.pop(0)
         # _logger.debug('第一行 %s'%headerFirstLine)
-
-        # 按照空格切割 ‘GET /fuck HTTP/1.1’
+        # 按照空格切割 ‘GET /xxx HTTP/1.1’
         self.requestMethod, self.requestUri, self.httpVersion = re.split('\s+', headerFirstLine)
+
+        # 将请求方法类型转为小写
+        methodToLower = self.requestMethod.lower()
 
         # 根据?切割,有get参数的情况下 /controller/action?xxx=xxx
         splitRequestUri = self.requestUri.split('?')
@@ -89,123 +172,46 @@ class WebApi:
         if len(splitRequestUri) > 1:
             self.baseUri, self.paramStr = splitRequestUri
         else:
+            self.paramStr = None
             # /controller/action
             self.baseUri = splitRequestUri[0]
             self.requestParamStr = None
 
         splitRequestUri = self.baseUri.split('/')
+
+        # 获取 请求资源的文件名和 后缀(如果有的话)
         self.__filePrefixName, self.__fileExtName = os.path.splitext(splitRequestUri[-1])
 
         # 截取controller和action
-        self.__getControllerAndAction(splitRequestUri)
+        getControllerAndAction(splitRequestUri)
 
-        for item in headList:
-            # 过滤空行
-            if item.strip() == "":
-                continue
-
-            # 获取key的索引值
-            segindex = item.find(":")
-
-            if segindex < 0:
-                continue
-            key = item[0:segindex].strip()
-            value = item[segindex + 1:].strip()
-            self.requestHeaders[key] = value
-
-        methodLower = self.requestMethod.lower()
-
-        if methodLower == "get" and "?" in self.requestUri:
-            # 获取?后面的的参数和值
-            if self.getDic:
-                self.getDic = dict(parse_qs(self.paramStr), **self.getDic)
+        # 判断请求类型,保存参数
+        if methodToLower == "get" and self.paramStr:
+            if "?" in self.requestUri:
+                # 获取?后面的的参数和值,如果有/xxx/xx/xx/xxx/xxx类型的参数,将?后面的参数合并到self.getParamsDic
+                if self.getParamsDic:
+                    self.getParamsDic = dict(parse_qs(self.paramStr), **self.getParamsDic)
             else:
-                self.getDic = parse_qs(self.paramStr)
+                self.getParamsDic = parse_qs(self.paramStr)
 
-        elif methodLower == "post" and self.responseHeaders.get('Content-Type', "").find("boundary") > 0:
-            # 判断是否有上传文件
-            self.form = cgi.FieldStorage(fp=self.rfile, headers=None,
-                                         environ={'REQUEST_METHOD': self.requestMethod,
-                                                  'CONTENT_TYPE': self.responseHeaders['Content-Type'], })
-            if self.form == None:
-                self.form = {}
-        elif methodLower == "post":
-            self.postDic = parse_qs(rfile)
+        elif methodToLower == "post":
+            if self.responseHeaders.get('Content-Type', "").find("boundary") > 0:
+                # 判断上传文件
+                uploadFile = StringIO(requestBody)
+                # 判断是否有上传文件
+                self.requestForm = cgi.FieldStorage(fp=uploadFile, headers=None,
+                                                    environ={'REQUEST_METHOD': self.requestMethod,
+                                                             'CONTENT_TYPE': self.responseHeaders['Content-Type'], })
+                if self.requestForm == None:
+                    self.requestForm = {}
+            else:
+                self.postParamsDic = parse_qs(requestBody)
 
-    #
-    def __getControllerAndAction(self, splitRequestUri):
-        # 删除所有元素
-        while '' in splitRequestUri:
-            splitRequestUri.remove('')
+    '''
+        处理静态文件
+    '''
 
-        splitRequestUriLen = len(splitRequestUri)
-
-        # logging.debug('splitRequestUriLen %d ' % splitRequestUriLen)
-        # 有controller和action或者GET param的情况
-        if splitRequestUriLen >= 2:
-
-            # 获取controller和action，并删除，剩下的就是GET参数
-            self.controller = splitRequestUri.pop(0)
-            # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
-            self.action = splitRequestUri.pop(0)
-            # logging.debug('splitRequestUriLen %s ' % str(splitRequestUri))
-            i = 1
-            for param in splitRequestUri:
-                if param.strip() is not '':
-                    self.getDic[i] = param
-                    i = i + 1
-
-        elif splitRequestUriLen == 1:
-            self.controller = splitRequestUri[0]
-            self.action = 'index'
-
-        else:
-            self.controller = 'index'
-            self.action = 'index'
-
-    # 删除文件中的 注释,空格,换行符,制表符
-    def trim(self, file):
-        fileFd = open(file)
-        data = fileFd.read()
-
-        # 设置 匹配注释 正则表达式
-        annotationReg = re.compile('(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)')
-
-        # 设置 匹配空格,换行符,制表符 正则表达式
-        spaceReg = re.compile('\s+')
-
-        # 去掉注释
-        annotationTrimData = re.sub(annotationReg, '', data)
-
-        # 再去掉 空格,换行符,制表符
-        spaceTrimData = re.sub(spaceReg, '', annotationTrimData)
-        fileFd.close()
-        return spaceTrimData
-
-    def input(self, method=None):
-        if method == 'get':
-            return self.getDic
-        elif method == 'post':
-            return self.postDic
-        else:
-            return dict(self.getDic, **self.postDic)
-
-    def render(self, file, data={}):
-        renderPath = 'View/'
-        prefixName, extName = os.path.splitext(file)
-        if extName != '.html':
-            templateHtml = Template(file=renderPath + file + '.html')
-        else:
-            templateHtml = Template(file=renderPath + file)
-
-        # 遍历data，设置模板变量
-        for k, v in data.iteritems():
-            # 相当于 templateHtml.{k}={v}
-            setattr(templateHtml, k, v)
-
-        return templateHtml
-
-    def __sendResponseFile(self):
+    def __handleStaticFile(self):
 
         # 判断静态文件是否存在
         def isStaticFileExist():
@@ -232,8 +238,12 @@ class WebApi:
             self.responseHeaders['ETag'] = fileModifyTime
             self.responseHeaders['Date'] = currentTimeStr
 
-            # 设置Content-Type
-            self.responseHeaders['Content-Type'] = CONTENT_TYPE.get(extName)
+            # 设置Content-Type,如果是列表中不存在的类型,按照未知获取
+            contentType = CONTENT_TYPE.get(extName)
+            if contentType:
+                self.responseHeaders['Content-Type'] = contentType
+            else:
+                self.responseHeaders['Content-Type'] = CONTENT_TYPE.get('unknown')
 
             # 根据配置设置缓存时间
             if CACHE_TIME == 0:
@@ -326,7 +336,7 @@ class WebApi:
 
         def generateResponseText():
             staticFileData = staticFile.read()
-            bufferSize = fileSize/4
+            bufferSize = fileSize / 4
             beginOffset = 0
             endOffset = bufferSize
             first = True
@@ -352,7 +362,6 @@ class WebApi:
 
             else:
                 self.responseText = staticFileData
-
 
         '''
          逻辑由此开始
@@ -380,10 +389,10 @@ class WebApi:
             # 获取文件修改时间
             fileModifyTime = os.path.getmtime(staticFileFullPath)
 
-            # 把文件修改时间转换为格林威治(GMT)时间
+            # 获取格林威治(GMT)格式的文件修改时间
             fileModifyTimeStr = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(fileModifyTime))
 
-            # 把当前时间转换为格林威治(GMT)时间
+            # 获取格林威治(GMT)格式的当前时间
             currentTimeStr = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(time.time()))
 
             # 检查缓存是否到期
@@ -418,7 +427,7 @@ class WebApi:
             if fileSize > CHUNKED_MIN_LENGTH and CHUNKED_MIN_LENGTH > 0:
                 self.responseHeaders['Transfer-Encoding'] = 'chunked'
                 chunked = True
-                self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, fileSize*2)
+                self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, fileSize * 2)
                 self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.TCP_NODELAY, 1)
 
             # 打开文件
@@ -433,10 +442,12 @@ class WebApi:
         except OSError as message:
             self.fastResponse(404)
             logging.error(message)
+            return
 
         except Exception as message:
             self.fastResponse(500)
             logging.error(message)
+            return
         else:
             self.__startResponse()
         finally:
@@ -444,64 +455,132 @@ class WebApi:
                 staticFile.close()
             pass
 
-    # 处理
-    def process(self, connParam):
+    '''
+        处理动态文件
+    '''
+
+    def __handledynamicFile(self):
         try:
-            # 开始解析request header
-            self.parse(connParam['requestData'])
+            ctlFilePath = os.path.join(_ctlPath, self.controller + '.py')
+            # 获取文件的最近修改时间
+            mtime = os.path.getmtime(ctlFilePath)
 
-            # 判断是否请求网站图标
-            if self.requestUri == "/favicon.ico":
-                self.requestUri = "/" + _staticDirPath + self.requestUri
-
-            # 判断是否静态文件，判断URI是否含有Cache，Static或者favicon.ico,如果为True,不往后执行
-            if _staticDirPath in self.requestUri or "favicon.ico" in self.requestUri:
-                self.__sendResponseFile()
-                return
-            # 开始处理动态内容
-            controller = _actionDic.get(self.controller)
-
-            # 判断URL中没有controller的情况
+            controller = _ctlImportDic.get(self.controller)
+            # 判断突然增加controller文件的情况
             if controller == None:
                 controller = __import__(self.controller)
-                mtime = os.path.getmtime("Controller/%s.py" % self.controller)
-                _actionTime[self.controller] = mtime
-                _actionDic[self.controller] = controller
+                # 更新文件信息
+                _ctlModifyMTimeDic[self.controller] = mtime
+                _ctlImportDic[self.controller] = controller
 
             else:
-                loadTime = _actionTime[self.controller]
-                mtime = os.path.getmtime("Controller/%s.py" % self.controller)
-                if mtime > loadTime:
-                    controller = reload(sys.modules[self.controller])
-                    _actionTime[self.controller] = mtime
-                    _actionDic[self.controller] = controller
+                # 获取文件记录的修改时间
+                lastMTime = _ctlModifyMTimeDic[self.controller]
 
-            # controller.action
+                # 如果文件有更新
+                if mtime > lastMTime:
+                    controller = reload(sys.modules[self.controller])
+                    _ctlModifyMTimeDic[self.controller] = mtime
+                    _ctlImportDic[self.controller] = controller
+
+            # 从导入的controller模块中获取要调用的action方法
             action = getattr(controller, self.action)
 
             # 获取返回值
             actionReturn = action(self)
+            if actionReturn == 123123:
+                # logging.debug('返回值---', actionReturn, controller, self.action)
+                raise Exception('返回值---', actionReturn, controller, self.action)
             if actionReturn:
                 self.responseText = str(actionReturn)
 
-            # 如果配置了gzip,且大小超过1K
+            # 如果配置了gzip,且大小超过设定值
             if GZIP and len(self.responseText) > GZIP_MIN_LENGTH:
                 buf = StringIO()
                 f = gzip.GzipFile(mode='wb', fileobj=buf, compresslevel=GZIP_LEVEL)
                 f.write(self.responseText)
                 f.close()
                 # self.responseText = gzip.GzipFile(data=self.responseText, compresslevel=8)
-
             self.__startResponse()
+
         except ImportError as message:
             self.fastResponse(404)
             logging.error(message)
-            pass
+
         except Exception as message:
             self.fastResponse(500)
-            logging.error(Exception, message)
+            logging.error(message)
+
         finally:
             pass
+
+    '''
+        删除文件中的 注释,空格,换行符,制表符
+    '''
+
+    def trim(self, file):
+        fileFd = open(file)
+        try:
+            data = fileFd.read()
+
+            # 设置 匹配注释 正则表达式
+            annotationReg = re.compile('(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)')
+
+            # 设置 匹配空格,换行符,制表符 正则表达式
+            spaceReg = re.compile('\s+')
+
+            # 去掉注释
+            annotationTrimData = re.sub(annotationReg, '', data)
+
+            # 再去掉 空格,换行符,制表符
+            spaceTrimData = re.sub(spaceReg, '', annotationTrimData)
+            return spaceTrimData
+        except Exception as message:
+            logging.error(message)
+        finally:
+            fileFd.close()
+
+    '''
+        获取 GET 或者 POST 参数,默认两种都获取
+    '''
+
+    def input(self, method=None):
+        if method == 'get':
+            return self.getParamsDic
+        elif method == 'post':
+            return self.postParamsDic
+        else:
+            return dict(self.getParamsDic, **self.postParamsDic)
+
+    '''
+        调用模板引擎生成HTML代码
+    '''
+
+    def render(self, templateName, context=None):
+        if not context:
+            context = {}
+        renderPath = 'View/'
+        try:
+            engine = tenjin.Engine()
+            # 文件名允许省略后缀
+            if '.html' not in templateName:
+                templateHtml = engine.render(renderPath + templateName + '.html', context)
+            else:
+                templateHtml = engine.render(renderPath + templateName, context)
+
+            return templateHtml
+
+        except tenjin.TemplateNotFoundError as message:
+            self.fastResponse(404, 'Template Not Found')
+            logging.error(message)
+
+        except tenjin.ParseError as message:
+            self.fastResponse(500, 'Template Parse Error')
+            logging.error(message)
+
+        except tenjin.TemplateSyntaxError as message:
+            self.fastResponse(500, 'Template Syntax Error')
+            logging.error(message)
 
     # 拼接Header，响应报文
     def __startResponse(self):
@@ -518,7 +597,7 @@ class WebApi:
 
 
             # Transfer-Encoding 和 Content-Length 不可共存
-            if not self.responseHeaders.has_key('Transfer-Encoding'):
+            if 'Transfer-Encoding' not in self.responseHeaders:
                 self.responseHeaders["Content-Length"] = responseTextLen
 
             self.connParam['responseTextLen'] = responseTextLen
@@ -530,10 +609,6 @@ class WebApi:
             # 拼接完整response
             self.connParam['responseData'] = "%s %s\r\n%s\n%s" % (
                 self.httpVersion, httpStatus, headStr, self.responseText)
-            # f = open('logs/test.txt','a')
-            # f.write(self.responseText)
-            # f.close()
-            # logging.debug(self.connParam['responseData'])
 
             # 设置响应数据准备完成的时间
             self.connParam['waitTime'] = time.time()
@@ -555,7 +630,6 @@ class WebApi:
     # 快速生成响应数据并响应
     def fastResponse(self, httpStatusCode, responseText=''):
         self.responseStatus = httpStatusCode
-        self.responseHeaders["Content-Type"] = 'text/html;charset=utf-8'
         if responseText:
             self.responseText = responseText
         else:

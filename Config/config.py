@@ -8,7 +8,7 @@ HOST = ''
 PORT = 8888
 
 # 允许等待连接队列的最大长度
-BACKLOG = 5
+BACKLOG = 1024
 
 # 启动进程数量,设置为0将根据cpu核心数来创建
 PROCESSES_NUM = 1
@@ -20,10 +20,10 @@ THREADS_NUM = 1
 WORKER_CONNECTIONS = 655350
 
 # 设置缓冲区大小
-BUFFER_SIZE = 1024
+SNT_BUFFER_SIZE = 1024
 
 # 设置缓冲区大小
-RCV_BUFFER_SIZE = 16 * 1024
+RCV_BUFFER_SIZE = 1024
 
 # 是否gzip压缩 html,css,js 图片
 GZIP = False
@@ -65,7 +65,7 @@ KEEP_ALIVE_TIMEOUT = 30
 DAEMON = False
 
 # 日志级别 'ERROR' > 'INFO' > 'DEBUG'
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
 
 LOG_FORMAT = '$remote_addr - $remote_user [$time_local] "$request" ''$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" "$http_x_forwarded_for"'
 

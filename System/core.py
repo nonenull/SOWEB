@@ -3,8 +3,9 @@
 import time, os, socket, select
 from Config import config
 from System import log as logging
-from multiprocessing.dummy import Pool as ThreadPool
-from System.webapi import WebApi
+from System.threadwork import ThreadPool
+# from multiprocessing.dummy import Pool as ThreadPool
+# from System.webapi import WebApi
 
 
 class Epoll:
@@ -14,11 +15,11 @@ class Epoll:
         self._connParams = {}
         self.childProcess = {}
         self.pid = os.getpid()
-        self.workerPool = ThreadPool(config.THREADS_NUM)
+        # self.workerPool = ThreadPool(config.THREADS_NUM)
 
         # 初始化线程
-        # self.workerThread = workerThreadPool(config.THREADS_NUM)
-        # self.workerThread.start()
+        self.workerThread = ThreadPool(config.THREADS_NUM)
+        self.workerThread.start()
 
         # 创建epoll,注册事件
         self.createEpoll()
@@ -34,7 +35,7 @@ class Epoll:
         # 开始EPOLL处理
         try:
             # 创建epoll并且注册事件
-            self.epollFd = select.epoll()
+            self.epollFd = select.epoll(config.WORKER_CONNECTIONS)
             self.epollFd.register(self.serverFdFileNo, select.EPOLLIN)
         except select.error as message:
             logging.error('createEpoll错误 %s' % message)
@@ -50,7 +51,6 @@ class Epoll:
         try:
             while 1:
                 events = self.epollFd.poll()
-                logging.debug('发生事件', events)
                 # 死循环 实时获取epoll中的事件
                 for fileNo, event in events:
                     eventsDict.get(event, self.clearFd)(fileNo)
@@ -59,10 +59,6 @@ class Epoll:
             # 变量dict以外的事件不处理
             logging.error(
                 '进程ID:%d - epollEventHandle() - 事件超出范围 - 错误代码: %s ' % (self.pid, message))
-
-        except Exception as message:
-            logging.error(
-                '进程ID:%d - epollEventHandle() - 错误代码: %s ' % (self.pid, message))
 
         finally:
             pass
@@ -90,28 +86,30 @@ class Epoll:
                 # 因为是多个进程竞争,所以其它进程会收到socket错误,需要忽略掉
                 pass
         else:
-            logging.debug('%d - 开始接收数据' % fd)
+            # logging.debug('%d - 开始接收数据' % fd)
             # 获取抓到的socket连接的信息
             connParam = self._connParams.get(fd)
 
             # 开始接收数据
-            totalDatas = []
+            totalDatas = ''
             try:
                 while 1:
-                    logging.debug('epollIn - 开始recv')
+                    logging.debug('epollIn - 开始recv',fd)
                     data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
-                    if not data: break
-                    totalDatas.append(data)
-            except socket.error:
-                pass
+                    if not data:
+                        break
+                    totalDatas+=data.decode('utf-8')
+            except BlockingIOError:
+                # 判断数据是否符合HTTP 规范
+                if '\r\n\r\n' not in totalDatas:
+                    self.clearFd(fd)
+                    logging.debug('接受到的数据不正常',fd,totalDatas)
+                    return
 
-            connParam['requestData'] = ''.join(data.decode('utf-8') for data in totalDatas)
-            if '\r\n\r\n' not in connParam['requestData']:
-                self.clearFd(fd)
-                return
-            connParam['recvTime'] = time.time()
-            self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
-
+                connParam['requestData'] = totalDatas
+                connParam['recvTime'] = time.time()
+                # self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
+                self.workerThread.addJob(self.epollFd, fd, connParam)
     '''
         发送响应数据
     '''

@@ -107,27 +107,6 @@ class Epoll:
             connParam['requestData'] = totalDatas
             connParam['recvTime'] = time.time()
             self.workerThread.addJob(self.epollFd, fd, connParam)
-            # try:
-            #     while 1:
-            #         logging.debug('epollIn - 开始recv', fd)
-            #         data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
-            #         if len(data) == 0:
-            #             break
-            #         totalDatas += data.decode('utf-8')
-            # except BlockingIOError:
-            #     pass
-            # else:
-            #     logging.debug(totalDatas)
-            #     # 判断数据是否符合HTTP 规范
-            #     if '\r\n\r\n' not in totalDatas:
-            #         self.clearFd(fd)
-            #         logging.debug('接受到的数据不正常', fd, totalDatas)
-            #         return
-            #
-            #     connParam['requestData'] = totalDatas
-            #     connParam['recvTime'] = time.time()
-            #     # self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
-            #     self.workerThread.addJob(self.epollFd, fd, connParam)
 
     '''
         发送响应数据

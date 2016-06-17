@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-import os, sys, signal,socket,compileall
+import os, sys, signal,socket
+from setproctitle import setproctitle
 from multiprocessing import cpu_count,Process
 from  Config.config import HOST, PORT, BACKLOG, DAEMON, PROCESSES_NUM
 from System import log as logging
@@ -7,7 +8,12 @@ from System.core import Epoll
 
 class Server:
     def __init__(self):
-        compileall.compile_dir(r'./', quiet=1)
+        # 初始化进程名字 数量
+        self.processNameNum = 1
+
+        # 设置进程名
+        setproctitle('SOWEB: master process %s'%self.getFullPath())
+
         # 创建socket监听服务
         self.createSocketServer()
 
@@ -37,25 +43,41 @@ class Server:
 
             # 如果flag为0，则将套接字设为非阻塞模式，否则将套接字设为阻塞模式（默认值）。非阻塞模式下，如果调用recv()没有发现任何数据，或send()调用无法立即发送数据，那么将引起socket.error异常。
             serverFd.setblocking(0)
-            serverFd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            # serverFd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         except socket.error as message:
             logging.error('监听服务失败,请检查端口冲突,或者查看是否重复运行 %s' % message)
             sys.exit(0)
 
     def createChildProcessing(self):
+
         # 如果config.PROCESSES_NUM设置为0, 按照CPU核心数量来创建子进程
         if not PROCESSES_NUM:
             num = cpu_count()
         else:
             num = PROCESSES_NUM
-
         for i in range(num):
             self.forkProcess()
+            self.processNameNum = self.processNameNum + 1
+
 
     def forkProcess(self):
         print('create')
         # 创建工作子进程
-        p = Process(target=Epoll, args=(self.serverFd,))
+        p = Process(target=self.initProcess, args=())
+        p.name = 'worker'
         p.daemon = True
         p.start()
+
+    def initProcess(self):
+        setproctitle('SOWEB: worker process %d'%self.processNameNum)
+        Epoll(self.serverFd)
+
+    def getFullPath(self):
+        pwd = ''
+        arg = sys.argv[0]
+        argSplit = arg.split('/')
+        file = argSplit[-1]
+        if os.path.isfile(file):
+            pwd = os.getcwd()
+        return os.path.join(pwd, file)

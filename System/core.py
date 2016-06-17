@@ -4,15 +4,12 @@ import time, os, socket, select
 from Config import config
 from System import log as logging
 from System.threadwork import ThreadPool
-# from multiprocessing.dummy import Pool as ThreadPool
-# from System.webapi import WebApi
-
 
 class Epoll:
     def __init__(self, serverFd):
         self.serverFd = serverFd
         self.serverFdFileNo = serverFd.fileno()
-        self._connParams = {}
+        self.__connParams = {}
         self.childProcess = {}
         self.pid = os.getpid()
         # self.workerPool = ThreadPool(config.THREADS_NUM)
@@ -35,7 +32,7 @@ class Epoll:
         # 开始EPOLL处理
         try:
             # 创建epoll并且注册事件
-            self.epollFd = select.epoll(config.WORKER_CONNECTIONS)
+            self.epollFd = select.epoll()
             self.epollFd.register(self.serverFdFileNo, select.EPOLLIN)
         except select.error as message:
             logging.error('createEpoll错误 %s' % message)
@@ -70,8 +67,8 @@ class Epoll:
     def __epollIn(self, fd):
         # 如果fd等于serverFdFileNo,说明是服务端监听socket有事件发生
         if fd == self.serverFdFileNo:
-            clientConn, clientAddr = self.serverFd.accept()
             try:
+                clientConn, clientAddr = self.serverFd.accept()
                 # 设置新的socket连接为非阻塞
                 clientConn.setblocking(0)
                 clientConn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -79,46 +76,68 @@ class Epoll:
                 clientFd = clientConn.fileno()
                 logging.debug('accept到新的client连接 -%d %s' % (clientFd, clientAddr))
                 acceptTime = time.time()
-                self._connParams[clientFd] = {"addr": clientAddr, "connections": clientConn, "acceptTime": acceptTime}
+                self.__connParams[clientFd] = {"addr": clientAddr, "connections": clientConn, "acceptTime": acceptTime}
                 # 向 epoll 句柄中注册 连接 socket 的 可读 事件
                 self.epollFd.register(clientFd, select.EPOLLET | select.EPOLLIN)
             except socket.error:
                 # 因为是多个进程竞争,所以其它进程会收到socket错误,需要忽略掉
                 pass
-        else:
-            # logging.debug('%d - 开始接收数据' % fd)
-            # 获取抓到的socket连接的信息
-            connParam = self._connParams.get(fd)
 
+        else:
+            # 获取抓到的socket连接的信息
+            connParam = self.__connParams.get(fd)
             # 开始接收数据
             totalDatas = ''
             try:
                 while 1:
-                    logging.debug('epollIn - 开始recv',fd)
                     data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
-                    if not data:
-                        break
-                    totalDatas+=data.decode('utf-8')
-            except BlockingIOError:
-                # 判断数据是否符合HTTP 规范
-                if '\r\n\r\n' not in totalDatas:
-                    self.clearFd(fd)
-                    logging.debug('接受到的数据不正常',fd,totalDatas)
-                    return
+                    # 当客户端主动断开连接,recv会直接返回b'',所以这里需要判断一下,否则会陷入死循环
+                    if not data: break
+                    totalDatas += data.decode('utf-8')
+            except socket.error:
+                # 在non-block的情况下,recv数据完成后会产生一个errno 11 的异常
+                # 在同时打开多个进程的情况下,recv数据完成后会产生一个errno 11 的异常
+                pass
+            # 判断数据是否符合HTTP 规范
+            if '\r\n\r\n' not in totalDatas:
+                self.clearFd(fd)
+                logging.debug('接受到的数据不正常', fd, totalDatas)
+                return
 
-                connParam['requestData'] = totalDatas
-                connParam['recvTime'] = time.time()
-                # self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
-                self.workerThread.addJob(self.epollFd, fd, connParam)
+            connParam['requestData'] = totalDatas
+            connParam['recvTime'] = time.time()
+            self.workerThread.addJob(self.epollFd, fd, connParam)
+            # try:
+            #     while 1:
+            #         logging.debug('epollIn - 开始recv', fd)
+            #         data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
+            #         if len(data) == 0:
+            #             break
+            #         totalDatas += data.decode('utf-8')
+            # except BlockingIOError:
+            #     pass
+            # else:
+            #     logging.debug(totalDatas)
+            #     # 判断数据是否符合HTTP 规范
+            #     if '\r\n\r\n' not in totalDatas:
+            #         self.clearFd(fd)
+            #         logging.debug('接受到的数据不正常', fd, totalDatas)
+            #         return
+            #
+            #     connParam['requestData'] = totalDatas
+            #     connParam['recvTime'] = time.time()
+            #     # self.workerPool.apply_async(WebApi, args=(self.epollFd, fd, connParam))
+            #     self.workerThread.addJob(self.epollFd, fd, connParam)
+
     '''
         发送响应数据
     '''
 
     def __epollOut(self, fd):
         logging.debug('%d - %d -  开始send数据 -----------' % (fd, self.pid))
-        # print self._connParams,self._connParams.get(fd)
+        # print self.__connParams,self.__connParams.get(fd)
         # 获取连接数据
-        responseParam = self._connParams.get(fd)
+        responseParam = self.__connParams.get(fd)
 
         # 获取响应数据
         responseData = responseParam.get('responseData')
@@ -130,7 +149,6 @@ class Epoll:
 
         currentClientConn = responseParam['connections']
         try:
-            # sendDataToClient()
             currentClientConn.sendall(responseData.encode('utf-8'))
             # while sendLen <= responseDataLen:
             #     sendLen = currentClientConn.sendto(responseData,addr)
@@ -144,7 +162,7 @@ class Epoll:
         #     # if not responseParam.get('keepalive', None):
         #
         #     # else:
-        #     #     self._connParams[fd] = {"addr": responseParam['addr'],
+        #     #     self.__connParams[fd] = {"addr": responseParam['addr'],
         #     #                             "connections": currentClientConn}
         #     #     # 更新 epoll 句柄中连接 fd 注册事件为 可读
         #     #     self.epollFd.modify(fd, select.EPOLLET | select.EPOLLIN)
@@ -161,10 +179,10 @@ class Epoll:
     def clearFd(self, fd):
         try:
             self.epollFd.unregister(fd)
-            param = self._connParams[fd]
+            param = self.__connParams[fd]
             param.get('connections').shutdown(socket.SHUT_RDWR)
             param.get('connections').close()
-            del self._connParams[fd]
+            del self.__connParams[fd]
         except socket.error as message:
             logging.error('clearFd错误 %s' % (message))
             pass

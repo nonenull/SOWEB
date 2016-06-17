@@ -65,9 +65,9 @@ class WebApi:
         self.__clientFd = fd
 
         # 开始解析 header 和 body
-        logging.debug('++++++++++++++++',time.time())
+        logging.debug('++++++++++++++++', time.time())
         self.__parse(connParam['requestData'])
-        logging.debug('----------------',time.time())
+        logging.debug('----------------', time.time())
         # 开始准备响应工作
         # 判断请求网站图标,如果是重新生成图标位置
         if self.requestUri == "/favicon.ico":
@@ -78,7 +78,8 @@ class WebApi:
             self.__handleStaticFile()
         else:
             self.__handledynamicFile()
-        logging.debug('****************',time.time())
+        logging.debug('****************', time.time())
+
     '''
         解析请求数据
     '''
@@ -152,7 +153,7 @@ class WebApi:
             saveResquestHeader(headerList)
         except ValueError as message:
             self.fastResponse(500)
-            logging.error('@@@@@@@@@@@@@@',requestData)
+            logging.error('@@@@@@@@@@@@@@', requestData)
             logging.error(message)
             return
 
@@ -641,7 +642,9 @@ class WebApi:
     def modifyEpollEvent(self):
         try:
             self.__epollFd.modify(self.__clientFd, select.EPOLLET | select.EPOLLOUT)
-        except Exception as message:
-            logging.error('WebApi - modifyEpollEvent : %s' % message)
+        except socket.error as message:
+            # 过滤掉errno 2 和errno 9 两者出现基本都是因为 服务端准备发送数据的时候客户端已经把连接关闭掉的情况下
+            if message.errno not in (2,9):
+                logging.error('WebApi - modifyEpollEvent : %s  %d' % (message,message.errno))
         finally:
             pass

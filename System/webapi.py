@@ -9,12 +9,12 @@ from tenjin.helpers import *
 from tenjin.html import *
 
 import os, sys, re, cgi, time, gzip, socket, select
-from System.helper import Helper
-import System.log as logging
 from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, \
     GZIP_LEVEL, \
     GZIP_MIN_LENGTH, GZIP_TYPES, TRIM, \
     TRIM_TYPES, CHUNKED_MIN_LENGTH
+from System.mylog import myLogging as logging
+from System.helper import Helper
 
 Help = Helper()
 Help.createPath()
@@ -31,7 +31,7 @@ _memoryCacheDirPath = Help.memoryCacheDirName
 
 
 class WebApi:
-    def __init__(self, epollFd, fd, connParam=''):
+    def __init__(self, epollFd, fd, connParam):
         logging.debug('%d - 开始解析http请求' % fd)
 
         # 请求头
@@ -66,7 +66,7 @@ class WebApi:
 
         # 开始解析 header 和 body
         logging.debug('++++++++++++++++', time.time())
-        self.__parse(connParam['requestData'])
+        self.__parse(connParam.get('requestData'))
         logging.debug('----------------', time.time())
         # 开始准备响应工作
         # 判断请求网站图标,如果是重新生成图标位置
@@ -151,10 +151,10 @@ class WebApi:
             headerList = header.split("\r\n")
             # 将header解析成dic存起来
             saveResquestHeader(headerList)
-        except ValueError as message:
+        except ValueError as e:
             self.fastResponse(500)
             logging.error('@@@@@@@@@@@@@@', requestData)
-            logging.error(message)
+            logging.error(e)
             return
 
         # 获取request 请求信息
@@ -440,14 +440,14 @@ class WebApi:
             else:
                 generateResponseText()
 
-        except OSError as message:
+        except OSError as e:
             self.fastResponse(404)
-            logging.error(message)
+            logging.error(e)
             return
 
-        except Exception as message:
+        except Exception as e:
             self.fastResponse(500)
-            logging.error(message)
+            logging.error(e)
             return
         else:
             self.__startResponse()
@@ -488,12 +488,13 @@ class WebApi:
             action = getattr(controller, self.action)
 
             # 获取返回值
-            actionReturn = action(self)
-            if actionReturn == 123123:
-                # logging.debug('返回值---', actionReturn, controller, self.action)
-                raise Exception('返回值---', actionReturn, controller, self.action)
-            if actionReturn:
-                self.responseText = str(actionReturn)
+            try:
+                actionReturn = action(self)
+            except Exception as e:
+                self.fastResponse(500,e)
+            else:
+                if actionReturn:
+                    self.responseText = str(actionReturn)
 
             # 如果配置了gzip,且大小超过设定值
             if GZIP and len(self.responseText) > GZIP_MIN_LENGTH:
@@ -504,13 +505,13 @@ class WebApi:
                 # self.responseText = gzip.GzipFile(data=self.responseText, compresslevel=8)
             self.__startResponse()
 
-        except ImportError as message:
+        except ImportError as e:
             self.fastResponse(404)
-            logging.error(message)
+            logging.error(e)
 
-        except Exception as message:
+        except Exception as e:
             self.fastResponse(500)
-            logging.error(message)
+            logging.error(e)
 
         finally:
             pass
@@ -536,8 +537,8 @@ class WebApi:
             # 再去掉 空格,换行符,制表符
             spaceTrimData = re.sub(spaceReg, '', annotationTrimData)
             return spaceTrimData
-        except Exception as message:
-            logging.error(message)
+        except Exception as e:
+            logging.error(e)
         finally:
             fileFd.close()
 
@@ -571,17 +572,17 @@ class WebApi:
 
             return templateHtml
 
-        except tenjin.TemplateNotFoundError as message:
+        except tenjin.TemplateNotFoundError as e:
             self.fastResponse(404, 'Template Not Found')
-            logging.error(message)
+            logging.error(e)
 
-        except tenjin.ParseError as message:
+        except tenjin.ParseError as e:
             self.fastResponse(500, 'Template Parse Error')
-            logging.error(message)
+            logging.error(e)
 
-        except tenjin.TemplateSyntaxError as message:
+        except tenjin.TemplateSyntaxError as e:
             self.fastResponse(500, 'Template Syntax Error')
-            logging.error(message)
+            logging.error(e)
 
     # 拼接Header，响应报文
     def __startResponse(self):
@@ -623,8 +624,8 @@ class WebApi:
             #     del self.connParam['requestData']
 
             self.modifyEpollEvent()
-        except Exception as message:
-            logging.error('WebApi - startResponse  : %s' % message)
+        except Exception as e:
+            logging.error('WebApi - startResponse  : %s' % e)
         finally:
             pass
 
@@ -632,7 +633,7 @@ class WebApi:
     def fastResponse(self, httpStatusCode, responseText=''):
         self.responseStatus = httpStatusCode
         if responseText:
-            self.responseText = responseText
+            self.responseText = str(responseText)
         else:
             self.responseText = STATUS.get(httpStatusCode)
 
@@ -642,9 +643,9 @@ class WebApi:
     def modifyEpollEvent(self):
         try:
             self.__epollFd.modify(self.__clientFd, select.EPOLLET | select.EPOLLOUT)
-        except socket.error as message:
+        except socket.error as e:
             # 过滤掉errno 2 和errno 9 两者出现基本都是因为 服务端准备发送数据的时候客户端已经把连接关闭掉的情况下
-            if message.errno not in (2,9):
-                logging.error('WebApi - modifyEpollEvent : %s  %d' % (message,message.errno))
+            if e.errno not in (2,9):
+                logging.error('WebApi - modifyEpollEvent : %s  %d' % (e,e.errno))
         finally:
             pass

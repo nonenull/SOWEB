@@ -1,9 +1,8 @@
 # -*- coding:utf-8 -*-
-
 import time, os, socket, select
 from Config import config
-from System import log as logging
 from System.threadwork import ThreadPool
+from System.mylog import myLogging as logging
 
 class Epoll:
     def __init__(self, serverFd):
@@ -61,9 +60,9 @@ class Epoll:
             pass
 
     '''
-     处理与客户端的连接
+        @param fd 客户端连接文件描述符
+        处理与客户端的连接
     '''
-
     def __epollIn(self, fd):
         # 如果fd等于serverFdFileNo,说明是服务端监听socket有事件发生
         if fd == self.serverFdFileNo:
@@ -106,12 +105,12 @@ class Epoll:
 
             connParam['requestData'] = totalDatas
             connParam['recvTime'] = time.time()
-            self.workerThread.addJob(self.epollFd, fd, connParam)
+            self.workerThread.addJob(self.epollFd, fd, connParam,)
 
     '''
+        @param fd 客户端连接文件描述符
         发送响应数据
     '''
-
     def __epollOut(self, fd):
         logging.debug('%d - %d -  开始send数据 -----------' % (fd, self.pid))
         # print self.__connParams,self.__connParams.get(fd)
@@ -151,10 +150,11 @@ class Epoll:
         finally:
             pass
 
-    '''
-       清空fd相关连接和变量
-    '''
 
+    '''
+        @param fd 客户端连接文件描述符
+        清空fd相关连接和变量
+    '''
     def clearFd(self, fd):
         try:
             self.epollFd.unregister(fd)

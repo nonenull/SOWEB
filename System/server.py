@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-import os, sys, signal,socket
+import os, sys, socket
 from setproctitle import setproctitle
 from multiprocessing import cpu_count,Process
-from  Config.config import HOST, PORT, BACKLOG, DAEMON, PROCESSES_NUM
-from System import log as logging
+from  Config.config import HOST, PORT, BACKLOG, PROCESSES_NUM
+from System.mylog import myLogging as logging
 from System.core import Epoll
 
 class Server:
     def __init__(self):
-        # 初始化进程名字 数量
+        # 初始化进程名称 序号
         self.processNameNum = 1
 
         # 设置进程名
@@ -20,12 +20,8 @@ class Server:
         # 创建子进程
         self.createChildProcessing()
 
-        # 转为后台运行
-        if DAEMON:
-            mainPid = os.getpid()
-            os.system('kill -HUP %d' % mainPid)
-        else:
-            signal.pause()
+        # 开始日志处理器
+        logging.startLogHandles()
 
     def createSocketServer(self):
         try:
@@ -46,6 +42,7 @@ class Server:
             # serverFd.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
         except socket.error as message:
+            # print('监听服务失败,请检查端口冲突,或者查看是否重复运行 %s' % message)
             logging.error('监听服务失败,请检查端口冲突,或者查看是否重复运行 %s' % message)
             sys.exit(0)
 
@@ -65,7 +62,6 @@ class Server:
         print('create')
         # 创建工作子进程
         p = Process(target=self.initProcess, args=())
-        p.name = 'worker'
         p.daemon = True
         p.start()
 

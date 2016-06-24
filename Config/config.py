@@ -11,7 +11,7 @@ PORT = 8888
 BACKLOG = 1024
 
 # 启动进程数量,设置为0将根据cpu核心数来创建
-PROCESSES_NUM = 1
+PROCESSES_NUM = 10
 
 # 设置单个进程启动的线程数量，线程总数 = PROCESSES_NUM * THREADS_NUM
 THREADS_NUM = 10
@@ -61,15 +61,16 @@ KEEP_ALIVE = False
 # keep-alive超时时间设置 --- 多少秒钟没有请求就关闭端口
 KEEP_ALIVE_TIMEOUT = 30
 
-# 后台运行模式
+# 后台运行模式,开启了将不会在终端输出日志信息
 DAEMON = False
 
 # 日志级别 'ERROR' > 'INFO' > 'DEBUG'
-LOG_LEVEL = 'INFO'
+LOG_LEVEL = 'DEBUG'
 
+# 生成HTTP访问日志的格式
 LOG_FORMAT = '$remote_addr - $remote_user [$time_local] "$request" ''$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" "$http_x_forwarded_for"'
 
-# 日志过期时间——超出时间将删除
+# 日志过期时间——超出时间将删除,单位:天
 LOG_EXPIRATION_TIME = 30
 
 CONTENT_TYPE = {

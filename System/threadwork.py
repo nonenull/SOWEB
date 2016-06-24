@@ -2,8 +2,8 @@
 
 import threading, time, queue as Queue
 from System.webapi import WebApi
-import System.log as logging
 from Config.config import TIMEOUT
+from System.mylog import myLogging as logging
 
 class WorkTasksThread(threading.Thread):
     def __init__(self, threadCondition, queue, **kwargs):
@@ -96,7 +96,6 @@ class ThreadPool:
     def start(self):
         i = 0
         for thread in self.threads:
-            thread
             thread.start()
 
     def addJob(self, *args, **kwargs):

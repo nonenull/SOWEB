@@ -7,7 +7,7 @@ DB_HOST = 'localhost'
 DB_USER = 'root'
 
 # 密码
-DB_PASSWD = '5818747'
+DB_PASSWD = ''
 
 # 默认选中的数据库名
 DB_NAME = 'bpbjj'

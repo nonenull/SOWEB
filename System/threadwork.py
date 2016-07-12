@@ -18,8 +18,8 @@ class WorkTasksThread(threading.Thread):
             epollFd, fd, connParam = args
             # 处理请求，并生成response数据
             WebApi(epollFd, fd, connParam)
-        except Exception as message:
-            logging.error("WorkTasksThread error: %s  %s" % (message))
+        except Exception as e:
+            logging.error("WorkTasksThread error: %s " % (e))
         finally:
             pass
 

@@ -3,23 +3,31 @@
 from io import StringIO
 from imp import reload
 from urllib.parse import parse_qs
+import mimetypes
+from http import HTTPStatus
+
+import traceback
 
 import tenjin
 from tenjin.helpers import *
 from tenjin.html import *
 
-import os, sys, re, cgi, time, gzip, socket, select
-from Config.config import CONTROLLER, CONTENT_TYPE, STATUS, KEEP_ALIVE, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, \
+import os, sys, re, time, gzip, socket, select
+from Config.config import CONTROLLER, KEEP_ALIVE, KEEP_ALIVE_TIMEOUT, CACHE_TIME, GZIP, \
     GZIP_LEVEL, \
     GZIP_MIN_LENGTH, GZIP_TYPES, TRIM, \
     TRIM_TYPES, CHUNKED_MIN_LENGTH
+from System.upload import Upload,UploadCheckError
 from System.mylog import myLogging as logging
 from System.helper import Helper
 
-Help = Helper()
-Help.createPath()
-Help.addSysPath()
-Help.getControllerInfo()
+try:
+    Help = Helper()
+    Help.createPath()
+    Help.addSysPath()
+    Help.getControllerInfo()
+except Exception:
+    pass
 
 # 执行Helper类
 _ctlPath = Help.ctlPath
@@ -58,16 +66,18 @@ class WebApi:
         self.action = 'index'
 
         self.getParamsDic = {}
-        self.requestForm = None
         self.postParamsDic = {}
+        self.postFileDic = {}
         self.connParam = connParam
         self.__epollFd = epollFd
         self.__clientFd = fd
 
+        self.fuck = self.__parse
         # 开始解析 header 和 body
-        logging.debug('++++++++++++++++', time.time())
+        # logging.debug('++++++++++++++++', connParam.get('requestData'))
         self.__parse(connParam.get('requestData'))
         logging.debug('----------------', time.time())
+
         # 开始准备响应工作
         # 判断请求网站图标,如果是重新生成图标位置
         if self.requestUri == "/favicon.ico":
@@ -85,7 +95,6 @@ class WebApi:
     '''
 
     def __parse(self, requestData):
-
         # 将header解析成dic存起来
         def saveResquestHeader(headerList):
             for item in headerList:
@@ -102,8 +111,7 @@ class WebApi:
                 value = item[segindex + 1:].strip()
                 self.requestHeaders[key] = value
 
-                # 获取控制器和动作
-
+        # 获取控制器和动作
         def getControllerAndAction(splitRequestUri):
             # 删除所有空元素
             while '' in splitRequestUri:
@@ -151,10 +159,11 @@ class WebApi:
             headerList = header.split("\r\n")
             # 将header解析成dic存起来
             saveResquestHeader(headerList)
+            # logging.debug('**********原始头部********',self.requestHeaders)
+
         except ValueError as e:
             self.fastResponse(500)
             logging.error('@@@@@@@@@@@@@@', requestData)
-            logging.error(e)
             return
 
         # 获取request 请求信息
@@ -165,7 +174,6 @@ class WebApi:
 
         # 将请求方法类型转为小写
         methodToLower = self.requestMethod.lower()
-
         # 根据?切割,有get参数的情况下 /controller/action?xxx=xxx
         splitRequestUri = self.requestUri.split('?')
 
@@ -179,9 +187,9 @@ class WebApi:
             self.requestParamStr = None
 
         splitRequestUri = self.baseUri.split('/')
-
         # 获取 请求资源的文件名和 后缀(如果有的话)
-        self.__filePrefixName, self.__fileExtName = os.path.splitext(splitRequestUri[-1])
+        self.__fileName = splitRequestUri[-1]
+        # self.__filePrefixName, self.__fileExtName = os.path.splitext(splitRequestUri[-1])
 
         # 截取controller和action
         getControllerAndAction(splitRequestUri)
@@ -196,17 +204,69 @@ class WebApi:
                 self.getParamsDic = parse_qs(self.paramStr)
 
         elif methodToLower == "post":
-            if self.responseHeaders.get('Content-Type', "").find("boundary") > 0:
-                # 判断上传文件
-                uploadFile = StringIO(requestBody)
-                # 判断是否有上传文件
-                self.requestForm = cgi.FieldStorage(fp=uploadFile, headers=None,
-                                                    environ={'REQUEST_METHOD': self.requestMethod,
-                                                             'CONTENT_TYPE': self.responseHeaders['Content-Type'], })
-                if self.requestForm == None:
-                    self.requestForm = {}
+            # Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryZhSJu2it4yyuMdlM
+            if self.requestHeaders.get('Content-Type', "").find("boundary") > 0:
+                # logging.debug('++++++++++fuck 11111 you+++++++++++++++')
+                self.__parseMultipartPost(requestBody)
             else:
                 self.postParamsDic = parse_qs(requestBody)
+
+    '''
+        解析 Content-Type为multipart/form-data; 的requestBody
+    '''
+    def __parseMultipartPost(self,requestBody):
+        try:
+            # logging.debug('requestBody',requestBody)
+            # multipart/form-data; boundary=----WebKitFormBoundaryMmTyCOdF17gBJbHF
+            # 获取boundary=后面的字符串
+            boundary = self.requestHeaders['Content-Type'].split('=')[-1]
+            # -- 标记结束,[数据内容以两条横线结尾，并同样以一个换行结束]
+            postList = requestBody.split('--'+boundary)
+            # logging.debug('postList',postList)
+            for i in postList:
+                # 排除掉空格等
+                if 'name' not in i:
+                    continue
+
+                if '\r\n\r\n' in i:
+                    splitStr = '\r\n\r\n'
+                else:
+                    splitStr = '\n\n'
+
+                splitItem = i.split(splitStr,maxsplit=1)
+                # logging.debug('itItem',splitItem)
+                describeNameStr = splitItem[0]
+                describeNameDic = {}
+                # 判断有上传文件的情况
+                if 'Content-Type' in describeNameStr and 'filename=' in describeNameStr:
+                    desItems = describeNameStr.split('\r\n')[1].split(';')
+                    for desitem in desItems:
+                        if '=' in desitem:
+                            # logging.debug(desitem)
+                            desSplitItem = desitem.split("=")
+                            itemName = desSplitItem[0].strip()
+                            # logging.debug(desSplitItem[1])
+                            itemValue = desSplitItem[1].strip().strip('"')
+                            describeNameDic[itemName] = itemValue
+
+                            logging.debug(describeNameDic)
+                            # logging.debug(itemName,itemValue)
+
+                    # logging.debug(describeNameDic)
+                    postName = describeNameDic.get('name')
+                    # logging.debug(splitItem)
+                    postValue = [describeNameDic.get('filename'),splitItem[-1].strip()]
+                    self.postFileDic[postName] = postValue
+                    # logging.debug(self.postFileDic)
+                else:
+                    postName = describeNameStr.split("name=")[-1].strip('"')
+                    postValue = splitItem[-1].strip()
+                # logging.debug('postName=',postName,'   postValue=',postValue)
+                    self.postParamsDic[postName] = postValue
+            # logging.debug('+++++++++++++++++++++',self.postParamsDic)
+        except Exception as e:
+            logging.error(e)
+            pass
 
     '''
         处理静态文件
@@ -240,11 +300,11 @@ class WebApi:
             self.responseHeaders['Date'] = currentTimeStr
 
             # 设置Content-Type,如果是列表中不存在的类型,按照未知获取
-            contentType = CONTENT_TYPE.get(extName)
+            contentType = mimetypes.guess_type(self.__fileName)[0]
             if contentType:
                 self.responseHeaders['Content-Type'] = contentType
             else:
-                self.responseHeaders['Content-Type'] = CONTENT_TYPE.get('unknown')
+                self.responseHeaders['Content-Type'] = 'application/octet-stream'
 
             # 根据配置设置缓存时间
             if CACHE_TIME == 0:
@@ -323,24 +383,22 @@ class WebApi:
 
             self.responseHeaders['Content-Length'] = partLen
 
-            staticFile = open(staticFileFullPath)
+            with open(staticFileFullPath) as staticFile:
+                # 设置文件的当前位置偏移,从偏移量开始读取数据
+                staticFile.seek(offset)
+                readlen = 10240
+                if readlen > partLen:
+                    readlen = partLen
 
-            # 设置文件的当前位置偏移,从偏移量开始读取数据
-            staticFile.seek(offset)
-            readlen = 10240
-            if readlen > partLen:
-                readlen = partLen
-
-            firstdata = staticFile.read(readlen)
-            self.responseText += firstdata
-            partLen -= len(firstdata)
+                firstdata = staticFile.read(readlen)
+                self.responseText += firstdata
+                partLen -= len(firstdata)
 
         def generateResponseText():
             staticFileData = staticFile.read()
             bufferSize = fileSize / 4
             beginOffset = 0
             endOffset = bufferSize
-            first = True
             if chunked:
                 while 1:
                     offsetData = staticFileData[beginOffset:endOffset]
@@ -399,8 +457,8 @@ class WebApi:
             # 检查缓存是否到期
             isFileCacheExpiry()
 
-            # 后缀去掉.符号
-            extName = self.__fileExtName.replace('.', '')
+            # # 后缀去掉.符号
+            # extName = self.__fileExtName.replace('.', '')
 
             # 初始化部分Header
             initHeader()
@@ -432,13 +490,12 @@ class WebApi:
                 self.connParam['connections'].setsockopt(socket.SOL_SOCKET, socket.TCP_NODELAY, 1)
 
             # 打开文件
-            staticFile = open(staticFileFullPath)
-
-            # Range 只请求实体的一部分，指定范围 ---- 即断点续传
-            if "Range" in self.requestHeaders:
-                rangeResponse()
-            else:
-                generateResponseText()
+            with open(staticFileFullPath) as staticFile:
+                # Range 只请求实体的一部分，指定范围 ---- 即断点续传
+                if "Range" in self.requestHeaders:
+                    rangeResponse()
+                else:
+                    generateResponseText()
 
         except OSError as e:
             self.fastResponse(404)
@@ -451,10 +508,6 @@ class WebApi:
             return
         else:
             self.__startResponse()
-        finally:
-            if staticFile:
-                staticFile.close()
-            pass
 
     '''
         处理动态文件
@@ -491,7 +544,7 @@ class WebApi:
             try:
                 actionReturn = action(self)
             except Exception as e:
-                self.fastResponse(500,e)
+                self.fastResponse(500, e)
             else:
                 if actionReturn:
                     self.responseText = str(actionReturn)
@@ -547,13 +600,36 @@ class WebApi:
     '''
 
     def input(self, method=None):
+        method = method.lower()
         if method == 'get':
             return self.getParamsDic
         elif method == 'post':
             return self.postParamsDic
+        elif method == 'file':
+            return self.postFileDic
         else:
-            return dict(self.getParamsDic, **self.postParamsDic)
+            inputDic = {}
+            inputDic.update(self.getParamsDic)
+            inputDic.update(self.postParamsDic)
+            inputDic.update(self.postFileDic)
+            return inputDic
 
+    '''
+        保存上传的文件
+    '''
+    def saveFile(self,name,config):
+        try:
+            fileData = self.postFileDic.get(name)
+            Upload(fileData,config)
+        except UploadCheckError as e:
+            # 捕获自定义异常
+            return e
+        except Exception as e:
+            traceback.print_exc()
+            # logging.error(e)
+            return e
+        else:
+            return True
     '''
         调用模板引擎生成HTML代码
     '''
@@ -588,15 +664,14 @@ class WebApi:
     def __startResponse(self):
         try:
 
-            self.responseHeaders["Content-Type"] = self.responseHeaders["Content-Type"] + ';charset=utf-8'
-
             # 例如 403 Forbidden
-            httpStatus = "%d %s" % (self.responseStatus, STATUS.get(self.responseStatus))
+            httpStatus = "%d %s" % (self.responseStatus, HTTPStatus(self.responseStatus).phrase)
             headStr = ''
 
             # 获取响应内容长度
-            responseTextLen = len(self.responseText)
+            responseTextLen = len(self.responseText.encode())
 
+            logging.debug('=========================',self.responseText,len(self.responseText))
 
             # Transfer-Encoding 和 Content-Length 不可共存
             if 'Transfer-Encoding' not in self.responseHeaders:
@@ -623,7 +698,7 @@ class WebApi:
             # if self.connParam.has_key('requestData'):
             #     del self.connParam['requestData']
 
-            self.modifyEpollEvent()
+            self.__modifyEpollEvent()
         except Exception as e:
             logging.error('WebApi - startResponse  : %s' % e)
         finally:
@@ -635,17 +710,17 @@ class WebApi:
         if responseText:
             self.responseText = str(responseText)
         else:
-            self.responseText = STATUS.get(httpStatusCode)
+            self.responseText = HTTPStatus(httpStatusCode).description
 
         self.__startResponse()
 
     # 修改epoll事件
-    def modifyEpollEvent(self):
+    def __modifyEpollEvent(self):
         try:
             self.__epollFd.modify(self.__clientFd, select.EPOLLET | select.EPOLLOUT)
         except socket.error as e:
             # 过滤掉errno 2 和errno 9 两者出现基本都是因为 服务端准备发送数据的时候客户端已经把连接关闭掉的情况下
-            if e.errno not in (2,9):
-                logging.error('WebApi - modifyEpollEvent : %s  %d' % (e,e.errno))
+            if e.errno not in (2, 9):
+                logging.error('WebApi - __modifyEpollEvent : %s  %d' % (e, e.errno))
         finally:
             pass

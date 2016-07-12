@@ -86,21 +86,23 @@ class Epoll:
             # 获取抓到的socket连接的信息
             connParam = self.__connParams.get(fd)
             # 开始接收数据
-            totalDatas = ''
+            dataList = []
             try:
                 while 1:
                     data = connParam['connections'].recv(config.RCV_BUFFER_SIZE)
                     # 当客户端主动断开连接,recv会直接返回b'',所以这里需要判断一下,否则会陷入死循环
                     if not data: break
-                    totalDatas += data.decode('utf-8')
+                    dataList.append(data)
             except socket.error:
                 # 在non-block的情况下,recv数据完成后会产生一个errno 11 的异常
                 # 在同时打开多个进程的情况下,recv数据完成后会产生一个errno 11 的异常
                 pass
+            bytesTotalDatas = b''.join(dataList)
+            totalDatas = bytesTotalDatas.decode('ISO-8859-1')
             # 判断数据是否符合HTTP 规范
             if '\r\n\r\n' not in totalDatas:
                 self.clearFd(fd)
-                logging.debug('接受到的数据不正常', fd, totalDatas)
+                logging.debug('接受到的数据不正常', fd)
                 return
 
             connParam['requestData'] = totalDatas

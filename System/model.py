@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 
-from Config import dbconfig
+from Config import db_config
 import pymysql
 import traceback
 from System.mylog import myLogging as logging
@@ -10,15 +10,16 @@ class Model:
     def __init__(self, dbName=None):
         self.conn = None
         # 初始化参数
-        self.__host = dbconfig.DB_HOST
-        self.__user = dbconfig.DB_USER
-        self.__password = dbconfig.DB_PASSWD
+        self.__host = db_config.DB_HOST
+        self.__user = db_config.DB_USER
+        self.__password = db_config.DB_PASSWD
         # 如果没有自定义实例化的数据库,按照配置文件中的默认数据库
-        if dbconfig:
+        if dbName:
             self.__db = dbName
         else:
-            self.__db = dbconfig.DB_NAME
-        self.__charset = dbconfig.DB_CHARSET
+            self.__db = db_config.DB_NAME
+
+        self.__charset = db_config.DB_CHARSET
 
         # 获取数据量连接
         self.getConn()
@@ -35,14 +36,16 @@ class Model:
         except pymysql.Error as e:
             logging.error('conn', e)
 
-    def selectOne(self):
-        pass
+    def selectOne(self,sql=''):
+        return self.select(sql,one=True)
 
-    def select(self):
+    def select(self,sql='',one=False):
         with self.conn.cursor() as cursor:
-            sql = "SELECT * FROM `bpbjj`.`users` WHERE `palayerId`=%s" % ('100000',)
             cursor.execute(sql)
-            return cursor.fetchall()
+            if one:
+                return cursor.fetchone()
+            else:
+                return cursor.fetchall()
 
     '''
         @return Boolean
@@ -118,11 +121,19 @@ class Model:
 
 db = Model()
 
-# if __name__ == '__main__':
-#     try:
-#         db = Model()
-#         a = 'fuckyou'
-#         db.insertMany('bpbjj.users', [{'playerid': 1, 'playerName': a},{'playerid': 2, 'playerName': a},{'playerid': 3, 'playerName': a},{'playerid': 4, 'playerName': a}])
-#     except Exception as e:
-#         print('+++++++++++++++++',e)
-#         # db.select('a','b','c').from('table').where('d = 10 and e = 20').limit(10).order('id desc')
+if __name__ == '__main__':
+    try:
+        a = 'fuckyou'
+        # db.insertMany('bpbjj.users', [{'playerid': 1, 'playerName': a},{'playerid': 2, 'playerName': a},{'playerid': 3, 'playerName': a},{'playerid': 4, 'playerName': a}])
+        sql = "SELECT * FROM `users` limit 1"
+        # res = db.selectOne(sql)
+        res = db.select(sql)
+        print(res)
+    except Exception as e:
+        print('+++++++++++++++++', e)
+        # db.select('a','b','c').from('table').where('d = 10 and e = 20').limit(10).order('id desc')
+
+        # where ={'a':'1','and':'b=2','or':'cc != 1'}
+        # where['playerid'] = '100016'
+        # where['and'] = 'cc != 1'
+        # where['or'] = 'aa = 1'

@@ -241,15 +241,16 @@ class WebApi:
                 if 'Content-Type' in describeNameStr and 'filename=' in describeNameStr:
                     desItems = describeNameStr.split('\r\n')[1].split(';')
                     for desitem in desItems:
+                        # logging.debug('----------------',desItems)
                         if '=' in desitem:
                             # logging.debug(desitem)
                             desSplitItem = desitem.split("=")
                             itemName = desSplitItem[0].strip()
                             # logging.debug(desSplitItem[1])
-                            itemValue = desSplitItem[1].strip().strip('"')
+                            # 转换编码,防止中文乱码
+                            itemValue = desSplitItem[1].strip().strip('"').encode('ISO-8859-1').decode('UTF-8')
                             describeNameDic[itemName] = itemValue
-
-                            logging.debug(describeNameDic)
+                            # logging.debug(describeNameDic)
                             # logging.debug(itemName,itemValue)
 
                     # logging.debug(describeNameDic)
